@@ -18,6 +18,13 @@ export async function analyzeTaskNote(content: string) {
     throw new Error('OpenAI API 키가 설정되지 않았습니다.');
   }
 
+  // 현재 날짜 가져오기
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+  const currentDay = today.getDate();
+  const currentDateStr = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${currentDay.toString().padStart(2, '0')}`;
+
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -29,7 +36,7 @@ export async function analyzeTaskNote(content: string) {
             주어진 업무 쪽지에서 다음 정보를 추출하세요:
             - 할 일 (title): 업무의 주요 제목
             - 분류 (category): MEETING(회의), BUSINESS_TRIP(출장), TRAINING(연수), EVENT(행사), CLASSROOM(담임), TASK(업무), OTHER(기타) 중 하나
-            - 날짜 (dueDate): YYYY-MM-DD 형식
+            - 날짜 (dueDate): YYYY-MM-DD 형식. 오늘은 ${currentDateStr}입니다. 날짜가 명시되지 않았다면 오늘 날짜를 사용하세요.
             - 시작 시간 (startTime): HH:MM 형식 (24시간제)
             - 종료 시간 (endTime): HH:MM 형식 (24시간제)
             - 장소 (location): 업무가 진행될 장소
