@@ -154,16 +154,34 @@ export async function POST(request: NextRequest) {
         dueDate: dueDate ? new Date(dueDate) : null,
         startTime: (() => {
           try {
-            if (!startTime || startTime.trim() === '') return null;
-            if (!dueDate) return null;
+            // 시간 문자열이 비어있거나 날짜가 없으면 null 반환
+            if (!startTime || startTime.trim() === '' || !dueDate) {
+              return null;
+            }
 
+            // 정규식으로 시간 형식 검증 (HH:MM)
+            if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(startTime.trim())) {
+              console.error('시작 시간 형식 오류:', startTime);
+              return null;
+            }
+
+            // 날짜 객체 생성 및 유효성 검사
             const date = new Date(dueDate);
-            if (isNaN(date.getTime())) return null;
+            if (isNaN(date.getTime())) {
+              console.error('날짜 형식 오류:', dueDate);
+              return null;
+            }
 
+            // 시간 설정
             const [hours, minutes] = startTime.split(':').map(Number);
-            if (isNaN(hours) || isNaN(minutes)) return null;
-
             date.setHours(hours, minutes, 0, 0);
+            
+            // 최종 유효성 검사
+            if (isNaN(date.getTime())) {
+              console.error('최종 날짜 오류:', date);
+              return null;
+            }
+            
             return date;
           } catch (e) {
             console.error('시작 시간 파싱 오류:', e);
@@ -172,16 +190,34 @@ export async function POST(request: NextRequest) {
         })(),
         endTime: (() => {
           try {
-            if (!endTime || endTime.trim() === '') return null;
-            if (!dueDate) return null;
-            
+            // 시간 문자열이 비어있거나 날짜가 없으면 null 반환
+            if (!endTime || endTime.trim() === '' || !dueDate) {
+              return null;
+            }
+
+            // 정규식으로 시간 형식 검증 (HH:MM)
+            if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(endTime.trim())) {
+              console.error('종료 시간 형식 오류:', endTime);
+              return null;
+            }
+
+            // 날짜 객체 생성 및 유효성 검사
             const date = new Date(dueDate);
-            if (isNaN(date.getTime())) return null;
+            if (isNaN(date.getTime())) {
+              console.error('날짜 형식 오류:', dueDate);
+              return null;
+            }
 
+            // 시간 설정
             const [hours, minutes] = endTime.split(':').map(Number);
-            if (isNaN(hours) || isNaN(minutes)) return null;
-
             date.setHours(hours, minutes, 0, 0);
+            
+            // 최종 유효성 검사
+            if (isNaN(date.getTime())) {
+              console.error('최종 날짜 오류:', date);
+              return null;
+            }
+            
             return date;
           } catch (e) {
             console.error('종료 시간 파싱 오류:', e);
@@ -193,7 +229,7 @@ export async function POST(request: NextRequest) {
         notes: notes || '',
         isShared: isShared ?? false,
         userId: session.user.id,
-        ...(roomId && {
+        ...(roomId && roomId.trim() !== '' && {
           room: {
             connect: { id: roomId }
           }

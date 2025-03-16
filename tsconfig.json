@@ -31,9 +31,10 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    "../.next-aissist/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    "../.next-aissist/types/**/*.ts"
+    "C:\\temp\\.next-aissist/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

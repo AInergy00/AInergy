@@ -111,9 +111,9 @@ export default function CreateTaskPage() {
     try {
       const dataToSubmit = {
         ...formData,
-        startTime: formData.startTime.trim() !== '' ? formData.startTime : undefined,
-        endTime: formData.endTime.trim() !== '' ? formData.endTime : undefined,
-        roomId: formData.roomId.trim() !== '' ? formData.roomId : undefined
+        startTime: formData.startTime && formData.startTime.trim() !== '' ? formData.startTime : undefined,
+        endTime: formData.endTime && formData.endTime.trim() !== '' ? formData.endTime : undefined,
+        roomId: formData.roomId && formData.roomId.trim() !== '' ? formData.roomId : undefined
       };
 
       const response = await fetch('/api/tasks', {
@@ -126,7 +126,7 @@ export default function CreateTaskPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || '업무 저장 중 오류가 발생했습니다.');
+        throw new Error(errorData.error || '업무 저장 중 오류가 발생했습니다.');
       }
 
       router.push('/tasks');
