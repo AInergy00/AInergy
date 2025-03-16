@@ -109,12 +109,29 @@ export default function CreateTaskPage() {
     setError(null);
 
     try {
-      const dataToSubmit = {
-        ...formData,
-        startTime: formData.startTime && formData.startTime.trim() !== '' ? formData.startTime : undefined,
-        endTime: formData.endTime && formData.endTime.trim() !== '' ? formData.endTime : undefined,
-        roomId: formData.roomId && formData.roomId.trim() !== '' ? formData.roomId : undefined
+      const dataToSubmit: Record<string, any> = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+        dueDate: formData.dueDate,
+        location: formData.location,
+        materials: formData.materials,
+        notes: formData.notes,
+        isShared: formData.isShared
       };
+      
+      if (formData.startTime && formData.startTime.trim() !== '') {
+        dataToSubmit.startTime = formData.startTime;
+      }
+      
+      if (formData.endTime && formData.endTime.trim() !== '') {
+        dataToSubmit.endTime = formData.endTime;
+      }
+      
+      if (formData.roomId && formData.roomId.trim() !== '') {
+        dataToSubmit.roomId = formData.roomId;
+      }
 
       const response = await fetch('/api/tasks', {
         method: 'POST',
