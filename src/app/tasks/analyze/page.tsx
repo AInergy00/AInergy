@@ -270,6 +270,7 @@ export default function AnalyzeTaskPage() {
                   <div className="flex space-x-2">
                     <input
                       type="time"
+                      step="600"
                       className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       value={result.startTime || ''}
                       onChange={(e) => handleInputChange('startTime', e.target.value)}
@@ -277,6 +278,7 @@ export default function AnalyzeTaskPage() {
                     />
                     <input
                       type="time"
+                      step="600"
                       className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       value={result.endTime || ''}
                       onChange={(e) => handleInputChange('endTime', e.target.value)}

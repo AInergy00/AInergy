@@ -175,6 +175,7 @@ export default async function EditTaskPage({ params }: { params: { id: string } 
                     </label>
                     <input
                       type="time"
+                      step="600"
                       id="startTime"
                       name="startTime"
                       defaultValue={formattedStartTime}
@@ -188,6 +189,7 @@ export default async function EditTaskPage({ params }: { params: { id: string } 
                     </label>
                     <input
                       type="time"
+                      step="600"
                       id="endTime"
                       name="endTime"
                       defaultValue={formattedEndTime}
