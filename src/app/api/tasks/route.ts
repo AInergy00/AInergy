@@ -152,8 +152,26 @@ export async function POST(request: NextRequest) {
         category: category || 'GENERAL',
         priority: priority || 'MEDIUM',
         dueDate: dueDate ? new Date(dueDate) : null,
-        startTime: startTime ? new Date(startTime) : null,
-        endTime: endTime ? new Date(endTime) : null,
+        startTime: startTime && startTime.trim() !== '' ? (() => {
+          try {
+            const date = new Date(dueDate);
+            const [hours, minutes] = startTime.split(':').map(Number);
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+          } catch (e) {
+            return null;
+          }
+        })() : null,
+        endTime: endTime && endTime.trim() !== '' ? (() => {
+          try {
+            const date = new Date(dueDate);
+            const [hours, minutes] = endTime.split(':').map(Number);
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+          } catch (e) {
+            return null;
+          }
+        })() : null,
         location: location || '',
         materials: Array.isArray(materials) ? '' : (materials || ''),
         notes: notes || '',
