@@ -2,7 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
-import { parseDateTime } from '@/lib/utils/date';
+
+// 날짜와 시간을 결합하여 DateTime 객체 생성
+function parseDateTime(dateStr: string | undefined | null, timeStr: string | undefined | null): Date | null {
+  try {
+    if (!dateStr || !timeStr) return null;
+    
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return null;
+    
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return null;
+    
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  } catch (e) {
+    console.error('DateTime 파싱 오류:', e);
+    return null;
+  }
+}
 
 export async function GET(
   req: NextRequest,
@@ -118,13 +136,19 @@ export async function PUT(
       status,
     } = await req.json();
 
-    // 날짜 및 시간 처리
     let dueDateObj = undefined;
     if (dueDate) {
-      dueDateObj = parseDateTime(dueDate);
-      if (!dueDateObj) {
+      try {
+        dueDateObj = new Date(dueDate);
+        if (isNaN(dueDateObj.getTime())) {
+          return NextResponse.json(
+            { error: '날짜 형식이 올바르지 않습니다.' },
+            { status: 400 }
+          );
+        }
+      } catch (error) {
         return NextResponse.json(
-          { message: '유효하지 않은 날짜 형식입니다.' },
+          { error: '날짜 형식이 올바르지 않습니다.' },
           { status: 400 }
         );
       }
@@ -133,12 +157,18 @@ export async function PUT(
     let startTimeObj = undefined;
     let endTimeObj = undefined;
 
-    if (startTime) {
-      startTimeObj = parseDateTime(dueDate || existingTask.dueDate?.toISOString().split('T')[0], startTime);
+    if (startTime && (dueDate || existingTask.dueDate)) {
+      const dateToUse = dueDate || existingTask.dueDate?.toISOString().split('T')[0];
+      if (dateToUse) {
+        startTimeObj = parseDateTime(dateToUse, startTime);
+      }
     }
 
-    if (endTime) {
-      endTimeObj = parseDateTime(dueDate || existingTask.dueDate?.toISOString().split('T')[0], endTime);
+    if (endTime && (dueDate || existingTask.dueDate)) {
+      const dateToUse = dueDate || existingTask.dueDate?.toISOString().split('T')[0];
+      if (dateToUse) {
+        endTimeObj = parseDateTime(dateToUse, endTime);
+      }
     }
 
     const updatedTask = await prisma.task.update({

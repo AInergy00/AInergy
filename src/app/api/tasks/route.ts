@@ -152,26 +152,42 @@ export async function POST(request: NextRequest) {
         category: category || 'GENERAL',
         priority: priority || 'MEDIUM',
         dueDate: dueDate ? new Date(dueDate) : null,
-        startTime: startTime && startTime.trim() !== '' ? (() => {
+        startTime: (() => {
           try {
+            if (!startTime || startTime.trim() === '') return null;
+            if (!dueDate) return null;
+
             const date = new Date(dueDate);
+            if (isNaN(date.getTime())) return null;
+
             const [hours, minutes] = startTime.split(':').map(Number);
+            if (isNaN(hours) || isNaN(minutes)) return null;
+
             date.setHours(hours, minutes, 0, 0);
             return date;
           } catch (e) {
+            console.error('시작 시간 파싱 오류:', e);
             return null;
           }
-        })() : null,
-        endTime: endTime && endTime.trim() !== '' ? (() => {
+        })(),
+        endTime: (() => {
           try {
+            if (!endTime || endTime.trim() === '') return null;
+            if (!dueDate) return null;
+            
             const date = new Date(dueDate);
+            if (isNaN(date.getTime())) return null;
+
             const [hours, minutes] = endTime.split(':').map(Number);
+            if (isNaN(hours) || isNaN(minutes)) return null;
+
             date.setHours(hours, minutes, 0, 0);
             return date;
           } catch (e) {
+            console.error('종료 시간 파싱 오류:', e);
             return null;
           }
-        })() : null,
+        })(),
         location: location || '',
         materials: Array.isArray(materials) ? '' : (materials || ''),
         notes: notes || '',
