@@ -1,0 +1,153 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  password       String
+  image          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  tasks          Task[]
+  rooms          RoomMember[]
+  templates      Template[]
+  calendars      Calendar[]
+  notifications  Notification[]
+}
+
+model Room {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  password    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     RoomMember[]
+  tasks       Task[]
+}
+
+model RoomMember {
+  id        String   @id @default(cuid())
+  role      String   @default("member") // admin, member
+  joinedAt  DateTime @default(now())
+  userId    String
+  roomId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+}
+
+model Task {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  category    TaskCategory
+  priority    TaskPriority  @default(MEDIUM)
+  status      TaskStatus    @default(TODO)
+  dueDate     DateTime?
+  startTime   DateTime?
+  endTime     DateTime?
+  location    String?
+  materials   String?
+  notes       String?
+  isShared    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  roomId      String?
+  userId      String
+  fileUrl     String?
+  linkUrl     String?
+  createdBy   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room        Room?         @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  calendar    Calendar?     @relation(fields: [calendarId], references: [id])
+  calendarId  String?
+  template    Template?     @relation(fields: [templateId], references: [id])
+  templateId  String?
+  completions TaskCompletion[]
+}
+
+model TaskCompletion {
+  id        String   @id @default(cuid())
+  completed Boolean  @default(false)
+  completedAt DateTime?
+  taskId    String
+  userId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+}
+
+model Calendar {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#0ea5e9")
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+}
+
+model Template {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  category    TaskCategory
+  content     String
+  isShared    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metadata  String?  // JSON string for additional data
+}
+
+enum TaskCategory {
+  MEETING
+  BUSINESS_TRIP
+  TRAINING
+  EVENT
+  CLASSROOM
+  TASK
+  OTHER
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
