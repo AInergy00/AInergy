@@ -120,13 +120,63 @@ export async function POST(request: NextRequest) {
       roomId
     } = data;
 
+    // 필수 필드 검증
     if (!title) {
-      return NextResponse.json({ error: '제목은 필수입니다.' }, { status: 400 });
+      return NextResponse.json(
+        { error: '제목은 필수 입력 항목입니다.' },
+        { status: 400 }
+      );
     }
 
-    // 방 ID가 제공된 경우 방 존재 및 권한 확인
-    if (roomId) {
-      const room = await prisma.room.findUnique({
+    // 날짜 검증
+    let dueDateObj = null;
+    if (dueDate) {
+      try {
+        dueDateObj = new Date(dueDate);
+        if (isNaN(dueDateObj.getTime())) {
+          return NextResponse.json(
+            { error: '날짜 형식이 올바르지 않습니다.' },
+            { status: 400 }
+          );
+        }
+      } catch (error) {
+        return NextResponse.json(
+          { error: '날짜 형식이 올바르지 않습니다.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 시간 검증 및 변환 함수
+    const parseTimeToDate = (timeStr: string | undefined | null, baseDate: Date | null): Date | null => {
+      if (!timeStr || !timeStr.trim() || !baseDate) return null;
+      
+      // 정규식으로 시간 형식 검증 (HH:MM)
+      if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr.trim())) {
+        console.error('시간 형식 오류:', timeStr);
+        return null;
+      }
+      
+      try {
+        const dateCopy = new Date(baseDate);
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        dateCopy.setHours(hours, minutes, 0, 0);
+        
+        if (isNaN(dateCopy.getTime())) {
+          console.error('최종 날짜 오류:', dateCopy);
+          return null;
+        }
+        
+        return dateCopy;
+      } catch (e) {
+        console.error('시간 파싱 오류:', e);
+        return null;
+      }
+    };
+
+    // 방 ID 검증
+    if (roomId && roomId.trim() !== '') {
+      const room = await prisma.room.findFirst({
         where: { id: roomId },
         include: {
           members: {
@@ -136,7 +186,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (!room) {
-        return NextResponse.json({ error: '방을 찾을 수 없습니다.' }, { status: 404 });
+        return NextResponse.json({ error: '존재하지 않는 방입니다.' }, { status: 404 });
       }
 
       // 사용자가 방의 멤버가 아닌 경우
@@ -151,79 +201,9 @@ export async function POST(request: NextRequest) {
         description: description || '',
         category: category || 'GENERAL',
         priority: priority || 'MEDIUM',
-        dueDate: dueDate ? new Date(dueDate) : null,
-        startTime: (() => {
-          try {
-            // 시간 문자열이 비어있거나 날짜가 없으면 null 반환
-            if (!startTime || startTime.trim() === '' || !dueDate) {
-              return null;
-            }
-
-            // 정규식으로 시간 형식 검증 (HH:MM)
-            if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(startTime.trim())) {
-              console.error('시작 시간 형식 오류:', startTime);
-              return null;
-            }
-
-            // 날짜 객체 생성 및 유효성 검사
-            const date = new Date(dueDate);
-            if (isNaN(date.getTime())) {
-              console.error('날짜 형식 오류:', dueDate);
-              return null;
-            }
-
-            // 시간 설정
-            const [hours, minutes] = startTime.split(':').map(Number);
-            date.setHours(hours, minutes, 0, 0);
-            
-            // 최종 유효성 검사
-            if (isNaN(date.getTime())) {
-              console.error('최종 날짜 오류:', date);
-              return null;
-            }
-            
-            return date;
-          } catch (e) {
-            console.error('시작 시간 파싱 오류:', e);
-            return null;
-          }
-        })(),
-        endTime: (() => {
-          try {
-            // 시간 문자열이 비어있거나 날짜가 없으면 null 반환
-            if (!endTime || endTime.trim() === '' || !dueDate) {
-              return null;
-            }
-
-            // 정규식으로 시간 형식 검증 (HH:MM)
-            if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(endTime.trim())) {
-              console.error('종료 시간 형식 오류:', endTime);
-              return null;
-            }
-
-            // 날짜 객체 생성 및 유효성 검사
-            const date = new Date(dueDate);
-            if (isNaN(date.getTime())) {
-              console.error('날짜 형식 오류:', dueDate);
-              return null;
-            }
-
-            // 시간 설정
-            const [hours, minutes] = endTime.split(':').map(Number);
-            date.setHours(hours, minutes, 0, 0);
-            
-            // 최종 유효성 검사
-            if (isNaN(date.getTime())) {
-              console.error('최종 날짜 오류:', date);
-              return null;
-            }
-            
-            return date;
-          } catch (e) {
-            console.error('종료 시간 파싱 오류:', e);
-            return null;
-          }
-        })(),
+        dueDate: dueDateObj,
+        startTime: parseTimeToDate(startTime, dueDateObj),
+        endTime: parseTimeToDate(endTime, dueDateObj),
         location: location || '',
         materials: Array.isArray(materials) ? '' : (materials || ''),
         notes: notes || '',

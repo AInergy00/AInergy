@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   reactStrictMode: true,
-  distDir: process.env.NEXTJS_DIST_DIR || '.next',
+  distDir: 'C:/temp/.next-aissist',
   output: 'standalone',
   poweredByHeader: false,
   images: {
