@@ -4,14 +4,14 @@ import { authOptions } from '@/lib/auth/auth-options';
 import { analyzeTaskNote } from '@/lib/ai';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json(
-      { message: '인증되지 않은 요청입니다.' },
-      { status: 401 }
-    );
-  }
+  // 인증 검사 임시 비활성화 (개발 중에만 사용)
+  // const session = await getServerSession(authOptions);
+  // if (!session) {
+  //   return NextResponse.json(
+  //     { message: '인증되지 않은 요청입니다.' },
+  //     { status: 401 }
+  //   );
+  // }
 
   try {
     const { content, provider = 'openai' } = await req.json();
