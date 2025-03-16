@@ -378,7 +378,21 @@ export default function CreateTaskPage() {
 
               {generatedContent && (
                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">생성된 업무 쪽지</h4>
+                  <div className="flex justify-between items-center mb-2">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedContent);
+                        // 복사 성공 알림
+                        alert('업무 쪽지가 클립보드에 복사되었습니다.');
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="ml-auto"
+                    >
+                      복사하기
+                    </Button>
+                  </div>
                   <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
                     {generatedContent}
                   </div>
