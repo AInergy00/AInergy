@@ -109,12 +109,19 @@ export default function CreateTaskPage() {
     setError(null);
 
     try {
+      const dataToSubmit = {
+        ...formData,
+        startTime: formData.startTime.trim() !== '' ? formData.startTime : undefined,
+        endTime: formData.endTime.trim() !== '' ? formData.endTime : undefined,
+        roomId: formData.roomId.trim() !== '' ? formData.roomId : undefined
+      };
+
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSubmit),
       });
 
       if (!response.ok) {
