@@ -1,5 +1,9 @@
 // @ts-ignore - Prisma 스키마 업데이트 예정
-import { TaskCategory, TaskPriority } from '@prisma/client';
+// import { TaskCategory, TaskPriority } from '@prisma/client';
+
+// TaskCategory와 TaskPriority 타입을 직접 정의
+export type TaskCategory = 'MEETING' | 'BUSINESS_TRIP' | 'TRAINING' | 'EVENT' | 'CLASSROOM' | 'TASK' | 'OTHER';
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export const categoryColors: Record<TaskCategory, string> = {
   MEETING: '#3b82f6', // 파란색

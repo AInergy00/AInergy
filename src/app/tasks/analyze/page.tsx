@@ -56,6 +56,7 @@ export default function AnalyzeTaskPage() {
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '업무 쪽지 분석 중 오류가 발생했습니다.');
+      console.error('분석 오류:', err);
     } finally {
       setIsAnalyzing(false);
     }
@@ -84,18 +85,19 @@ export default function AnalyzeTaskPage() {
       router.push('/tasks');
     } catch (err) {
       setError(err instanceof Error ? err.message : '업무 저장 중 오류가 발생했습니다.');
+      console.error('저장 오류:', err);
     }
   };
 
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">업무 쪽지 분석</h1>
+        <h1 className="text-2xl font-bold">업무 쪽지 분석</h1>
         
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div className="bg-card shadow rounded-lg p-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="content" className="block text-sm font-medium">
                 업무 쪽지 내용
               </label>
               <div className="mt-1">
@@ -103,7 +105,7 @@ export default function AnalyzeTaskPage() {
                   id="content"
                   name="content"
                   rows={10}
-                  className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-md"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   placeholder="업무 쪽지 내용을 붙여넣으세요..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
@@ -112,14 +114,14 @@ export default function AnalyzeTaskPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium">
                 AI 제공자
               </label>
               <div className="mt-1 flex space-x-4">
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
-                    className="form-radio text-primary-600"
+                    className="form-radio text-primary"
                     name="aiProvider"
                     value="openai"
                     checked={aiProvider === 'openai'}
@@ -130,7 +132,7 @@ export default function AnalyzeTaskPage() {
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
-                    className="form-radio text-primary-600"
+                    className="form-radio text-primary"
                     name="aiProvider"
                     value="gemini"
                     checked={aiProvider === 'gemini'}
@@ -142,9 +144,9 @@ export default function AnalyzeTaskPage() {
             </div>
 
             {error && (
-              <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4">
+              <div className="rounded-md bg-destructive/10 p-4">
                 <div className="flex">
-                  <div className="text-sm text-red-700 dark:text-red-400">{error}</div>
+                  <div className="text-sm text-destructive">{error}</div>
                 </div>
               </div>
             )}
@@ -162,39 +164,39 @@ export default function AnalyzeTaskPage() {
         </div>
 
         {result && (
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">분석 결과</h2>
+          <div className="bg-card shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium mb-4">분석 결과</h2>
             
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium">
                     할 일
                   </label>
-                  <div className="mt-1 text-sm text-gray-900 dark:text-white">{result.title}</div>
+                  <div className="mt-1 text-sm">{result.title}</div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium">
                     분류
                   </label>
-                  <div className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {categoryLabels[result.category]}
+                  <div className="mt-1 text-sm">
+                    {categoryLabels[result.category] || result.category}
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium">
                     날짜
                   </label>
-                  <div className="mt-1 text-sm text-gray-900 dark:text-white">{result.dueDate}</div>
+                  <div className="mt-1 text-sm">{result.dueDate}</div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium">
                     시간
                   </label>
-                  <div className="mt-1 text-sm text-gray-900 dark:text-white">
+                  <div className="mt-1 text-sm">
                     {result.startTime && result.endTime
                       ? `${result.startTime} - ${result.endTime}`
                       : result.startTime || result.endTime || '미정'}
@@ -202,29 +204,29 @@ export default function AnalyzeTaskPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium">
                     장소
                   </label>
-                  <div className="mt-1 text-sm text-gray-900 dark:text-white">
+                  <div className="mt-1 text-sm">
                     {result.location || '미정'}
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium">
                     준비물
                   </label>
-                  <div className="mt-1 text-sm text-gray-900 dark:text-white">
+                  <div className="mt-1 text-sm">
                     {result.materials || '없음'}
                   </div>
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="block text-sm font-medium">
                   비고
                 </label>
-                <div className="mt-1 text-sm text-gray-900 dark:text-white whitespace-pre-line">
+                <div className="mt-1 text-sm whitespace-pre-line">
                   {result.notes || '없음'}
                 </div>
               </div>
