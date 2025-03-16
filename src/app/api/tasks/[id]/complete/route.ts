@@ -7,13 +7,17 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // AJAX 요청인지 확인
+  const isAjaxRequest = request.headers.get('X-Requested-With') === 'XMLHttpRequest';
+  
   // 인증 체크
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
   }
 
-  const taskId = params.id;
+  // Next.js 15.2 이상에서는 params를 사용하기 전에 await해야 함
+  const { id: taskId } = await params;
   const formData = await request.formData();
   const completedParam = formData.get('completed');
   
@@ -68,7 +72,26 @@ export async function POST(
       }
     }
 
-    return NextResponse.redirect(`/tasks/${taskId}`);
+    // JSON 응답 헤더를 명시적으로 설정
+    const headers = new Headers();
+    headers.set('Content-Type', 'application/json');
+    headers.set('Cache-Control', 'no-store');
+    headers.set('X-Content-Type-Options', 'nosniff');
+    
+    // AJAX 요청인 경우에만 JSON 응답, 아니면 Redirect 응답
+    if (isAjaxRequest) {
+      return new NextResponse(JSON.stringify({ success: true, taskId }), { 
+        status: 200,
+        headers: headers
+      });
+    } else {
+      // AJAX 요청이 아닌 경우 이전 페이지로 리다이렉트
+      headers.set('Location', request.headers.get('Referer') || '/tasks');
+      return new NextResponse(null, { 
+        status: 303, // See Other
+        headers: headers
+      });
+    }
   } catch (error) {
     console.error('업무 완료 상태 변경 중 오류 발생:', error);
     return NextResponse.json(

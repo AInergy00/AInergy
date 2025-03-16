@@ -15,10 +15,13 @@ export default async function TaskDetailPage({ params }: { params: { id: string 
     redirect('/login');
   }
 
+  // Next.js 15.2 이상에서는 params를 사용하기 전에 await해야 함
+  const { id } = await params;
+
   // 업무 조회
   const task = await prisma.task.findUnique({
     where: {
-      id: params.id,
+      id: id,
     },
     include: {
       room: true,

@@ -29,8 +29,9 @@ interface TasksListProps {
 
 export function TasksList({ tasks, roomId }: TasksListProps) {
   const [filter, setFilter] = useState<'all' | 'complete' | 'incomplete'>('all');
+  const [tasksState, setTasks] = useState<Task[]>(tasks);
   
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = tasksState.filter(task => {
     if (filter === 'all') return true;
     const isCompleted = task.completions.some(completion => completion.completed);
     return filter === 'complete' ? isCompleted : !isCompleted;
@@ -65,22 +66,59 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
 
   const handleTaskCompletion = async (taskId: string, isCompleted: boolean) => {
     try {
+      const formData = new FormData();
+      formData.append('completed', (!isCompleted).toString());
+
+      // fetch 옵션을 수정하여 JSON 응답이 직접 표시되지 않도록 함
       const response = await fetch(`/api/tasks/${taskId}/complete`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest' // AJAX 요청임을 명시
         },
-        body: JSON.stringify({ completed: !isCompleted }),
+        body: formData,
+        // 브라우저가 응답을 직접 처리하지 않도록 설정
+        credentials: 'same-origin',
       });
       
-      if (!response.ok) {
-        throw new Error('작업 상태를 변경하는데 실패했습니다.');
+      let data;
+      try {
+        // 응답 데이터를 한 번만 읽음
+        data = await response.json();
+      } catch (e) {
+        console.error('응답 파싱 오류:', e);
+        throw new Error('응답을 처리하는데 실패했습니다.');
       }
       
-      // 여기서 필요한 경우 상태 업데이트를 위한 콜백 호출
-      window.location.reload();
+      // response가 정상적으로 처리되었는지 확인
+      if (!response.ok) {
+        throw new Error(data.error || '작업 상태를 변경하는데 실패했습니다.');
+      }
+      
+      // 서버에서 성공적으로 처리되었다면 클라이언트 상태 업데이트
+      if (data.success) {
+        setTasks(prevTasks => 
+          prevTasks.map(task => {
+            if (task.id === taskId) {
+              // 완료 상태 토글
+              const updatedCompletions = task.completions.length > 0 
+                ? [{ ...task.completions[0], completed: !isCompleted, completedAt: !isCompleted ? new Date().toISOString() : null }]
+                : [{ id: 'temp-id', completed: !isCompleted, completedAt: !isCompleted ? new Date().toISOString() : null, userId: '' }];
+              
+              return { ...task, completions: updatedCompletions };
+            }
+            return task;
+          })
+        );
+      } else {
+        // 성공하지 않았을 경우 오류 메시지 표시
+        console.error('작업 완료 상태 변경 실패:', data);
+        window.location.reload(); // 페이지 새로고침으로 상태 동기화
+      }
     } catch (error) {
       console.error('작업 완료 상태 변경 중 오류 발생:', error);
+      alert('작업 완료 상태를 변경하는데 실패했습니다.');
+      window.location.reload(); // 오류 발생 시 페이지 새로고침
     }
   };
 

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, isSameMonth, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, isSameMonth, parseISO, isValid } from 'date-fns';
 import { getCategoryColor } from '@/lib/utils/theme';
 import { formatDate } from '@/lib/utils/date';
 
@@ -22,11 +22,17 @@ export default async function CalendarPage({
 
   // 현재 날짜 또는 URL 파라미터에서 가져온 날짜로 초기화
   const currentDate = new Date();
-  const month = searchParams.month
-    ? parseInt(searchParams.month) - 1 // Date 객체는 0부터 시작하므로 1을 빼줍니다
+  
+  // Next.js 15.2 이상에서는 searchParams를 await로 처리
+  const params = await searchParams;
+  const monthStr = params?.month ? String(params.month) : null;
+  const yearStr = params?.year ? String(params.year) : null;
+  
+  const month = monthStr
+    ? parseInt(monthStr) - 1 // Date 객체는 0부터 시작하므로 1을 빼줍니다
     : currentDate.getMonth();
-  const year = searchParams.year
-    ? parseInt(searchParams.year)
+  const year = yearStr
+    ? parseInt(yearStr)
     : currentDate.getFullYear();
 
   const firstDayOfMonth = startOfMonth(new Date(year, month));
@@ -92,6 +98,32 @@ export default async function CalendarPage({
     acc[dateStr] = dayTasks;
     return acc;
   }, {} as Record<string, typeof tasks>);
+
+  // 수정된 시간 포맷팅 함수
+  const formatTimeIfValid = (timeStr: any): string => {
+    if (!timeStr) return '';
+    
+    try {
+      // 문자열이면 parseISO, 아니면 그대로 사용
+      let date;
+      if (typeof timeStr === 'string') {
+        date = parseISO(timeStr);
+      } else if (timeStr instanceof Date) {
+        date = timeStr;
+      } else {
+        // Date 객체로 변환 시도
+        date = new Date(timeStr);
+      }
+      
+      if (isValid(date)) {
+        return format(date, 'HH:mm');
+      }
+      return '';
+    } catch (error) {
+      console.error('Invalid date format:', timeStr);
+      return '';
+    }
+  };
 
   return (
     <Layout>
@@ -196,7 +228,7 @@ export default async function CalendarPage({
                           >
                             {task.startTime && (
                               <span className="mr-1 font-medium">
-                                {format(parseISO(task.startTime.toString()), 'HH:mm')}
+                                {formatTimeIfValid(task.startTime)}
                               </span>
                             )}
                             {task.title}

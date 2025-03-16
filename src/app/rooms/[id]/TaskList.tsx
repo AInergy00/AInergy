@@ -30,25 +30,41 @@ export default function TaskList({ incompleteTasks, completedTasks, userId }: Ta
   
   const toggleCompletion = async (taskId: string, isCompleted: boolean) => {
     try {
+      const formData = new FormData();
+      formData.append('completed', (!isCompleted).toString());
+      
       const response = await fetch(`/api/tasks/${taskId}/complete`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
-        body: JSON.stringify({ 
-          completed: !isCompleted,
-          userId
-        }),
+        body: formData,
+        credentials: 'same-origin',
       });
       
-      if (!response.ok) {
-        throw new Error('완료 상태 변경에 실패했습니다');
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('응답 파싱 오류:', e);
+        throw new Error('응답을 처리하는데 실패했습니다.');
       }
       
-      // 페이지 새로고침 (서버 컴포넌트 다시 불러오기)
-      window.location.reload();
+      if (!response.ok) {
+        throw new Error(data.error || '완료 상태 변경에 실패했습니다');
+      }
+      
+      if (data.success) {
+        window.location.reload();
+      } else {
+        console.error('작업 완료 상태 변경 실패:', data);
+        window.location.reload();
+      }
     } catch (error) {
-      console.error('할일 완료 상태 변경 오류:', error);
+      console.error('완료 상태 변경 중 오류 발생:', error);
+      alert('작업 완료 상태 변경에 실패했습니다.');
+      window.location.reload();
     }
   };
   

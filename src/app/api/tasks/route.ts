@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: '방을 찾을 수 없습니다.' }, { status: 404 });
       }
       
-      // 사용자가 방의 멤버가 아니고 방장도 아닌 경우
-      if (room.ownerId !== session.user.id && room.members.length === 0) {
+      // 사용자가 방의 멤버가 아닌 경우
+      if (room.members.length === 0) {
         return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
       }
     } else {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
             name: true,
           }
         },
-        user: {
+        createdBy: {
           select: {
             id: true,
             name: true,
@@ -139,9 +139,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '방을 찾을 수 없습니다.' }, { status: 404 });
       }
 
-      // 사용자가 방의 멤버가 아니고 방장도 아닌 경우
-      if (room.ownerId !== session.user.id && room.members.length === 0) {
-        return NextResponse.json({ error: '방에 할일을 추가할 권한이 없습니다.' }, { status: 403 });
+      // 사용자가 방의 멤버가 아닌 경우
+      if (room.members.length === 0) {
+        return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
       }
     }
 
@@ -152,15 +152,13 @@ export async function POST(request: NextRequest) {
         category: category || 'GENERAL',
         priority: priority || 'MEDIUM',
         dueDate: dueDate ? new Date(dueDate) : null,
-        startTime,
-        endTime,
+        startTime: startTime ? new Date(startTime) : null,
+        endTime: endTime ? new Date(endTime) : null,
         location: location || '',
-        materials: materials || '',
+        materials: Array.isArray(materials) ? '' : (materials || ''),
         notes: notes || '',
         isShared: isShared ?? false,
-        user: {
-          connect: { id: session.user.id }
-        },
+        userId: session.user.id,
         ...(roomId && {
           room: {
             connect: { id: roomId }
