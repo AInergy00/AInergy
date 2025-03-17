@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
 import { getCategoryLabel } from '@/lib/utils/theme';
 import { formatDistanceToNow, isFuture, isWithinInterval, subDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useSession } from 'next-auth/react';
 
 interface TaskCompletion {
   id: string;
   completed: boolean;
   completedAt: string | null;
   userId: string;
+  user?: {
+    id: string;
+    name: string;
+  };
+}
+
+interface RoomMember {
+  id: string;
+  userId: string;
+  roomId: string;
+  role: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 interface Task {
@@ -42,27 +59,70 @@ interface TasksListProps {
 }
 
 export function TasksList({ tasks, roomId }: TasksListProps) {
+  const { data: session } = useSession();
   const [filter, setFilter] = useState<'all' | 'complete' | 'incomplete'>('all');
   const [tasksState, setTasks] = useState<Task[]>(tasks);
+  const [roomMembers, setRoomMembers] = useState<RoomMember[]>([]);
+  
+  // 방 멤버 정보 가져오기
+  useEffect(() => {
+    const fetchRoomMembers = async () => {
+      try {
+        const response = await fetch(`/api/rooms/${roomId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.members) {
+            setRoomMembers(data.members);
+          }
+        }
+      } catch (error) {
+        console.error('방 멤버 정보 가져오기 오류:', error);
+      }
+    };
+    
+    if (roomId) {
+      fetchRoomMembers();
+    }
+  }, [roomId]);
   
   const filteredTasks = tasksState.filter(task => {
     if (filter === 'all') return true;
-    const isCompleted = task.completions.some(completion => completion.completed);
-    return filter === 'complete' ? isCompleted : !isCompleted;
+    
+    // 모든 구성원이 완료했는지 확인
+    const allMembersCompleted = roomMembers.length > 0 && 
+      roomMembers.every(member => 
+        task.completions.some(completion => 
+          completion.userId === member.userId && completion.completed
+        )
+      );
+    
+    return filter === 'complete' ? allMembersCompleted : !allMembersCompleted;
   });
 
   // 정렬: 완료되지 않은 항목은 날짜순, 완료된 항목은 완료일순
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-    const aCompleted = a.completions.some(c => c.completed);
-    const bCompleted = b.completions.some(c => c.completed);
+    // 모든 구성원이 완료했는지 확인
+    const aAllCompleted = roomMembers.length > 0 && 
+      roomMembers.every(member => 
+        a.completions.some(completion => 
+          completion.userId === member.userId && completion.completed
+        )
+      );
+    
+    const bAllCompleted = roomMembers.length > 0 && 
+      roomMembers.every(member => 
+        b.completions.some(completion => 
+          completion.userId === member.userId && completion.completed
+        )
+      );
     
     // 완료 여부가 다른 경우 미완료를 먼저
-    if (aCompleted !== bCompleted) {
-      return aCompleted ? 1 : -1;
+    if (aAllCompleted !== bAllCompleted) {
+      return aAllCompleted ? 1 : -1;
     }
     
     // 두 작업 모두 미완료인 경우 마감일순
-    if (!aCompleted && !bCompleted) {
+    if (!aAllCompleted && !bAllCompleted) {
       if (!a.dueDate) return 1;
       if (!b.dueDate) return -1;
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
@@ -90,10 +150,11 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
            (isFuture(deadline) && formatDistanceToNow(deadline, { locale: ko }).includes('하루'));
   };
 
-  const handleTaskCompletion = async (taskId: string, isCompleted: boolean) => {
+  const handleTaskCompletion = async (taskId: string, userId: string, isCompleted: boolean) => {
     try {
       const formData = new FormData();
       formData.append('completed', (!isCompleted).toString());
+      formData.append('userId', userId);
 
       // fetch 옵션을 수정하여 JSON 응답이 직접 표시되지 않도록 함
       const response = await fetch(`/api/tasks/${taskId}/complete`, {
@@ -126,10 +187,26 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
         setTasks(prevTasks => 
           prevTasks.map(task => {
             if (task.id === taskId) {
-              // 완료 상태 토글
-              const updatedCompletions = task.completions.length > 0 
-                ? [{ ...task.completions[0], completed: !isCompleted, completedAt: !isCompleted ? new Date().toISOString() : null }]
-                : [{ id: 'temp-id', completed: !isCompleted, completedAt: !isCompleted ? new Date().toISOString() : null, userId: '' }];
+              // 해당 사용자의 완료 상태 토글
+              let updatedCompletions = [...task.completions];
+              const completionIndex = updatedCompletions.findIndex(c => c.userId === userId);
+              
+              if (completionIndex >= 0) {
+                // 기존 완료 정보 업데이트
+                updatedCompletions[completionIndex] = {
+                  ...updatedCompletions[completionIndex],
+                  completed: !isCompleted,
+                  completedAt: !isCompleted ? new Date().toISOString() : null
+                };
+              } else {
+                // 새 완료 정보 추가
+                updatedCompletions.push({
+                  id: `temp-id-${Date.now()}`,
+                  userId: userId,
+                  completed: !isCompleted,
+                  completedAt: !isCompleted ? new Date().toISOString() : null
+                });
+              }
               
               return { ...task, completions: updatedCompletions };
             }
@@ -176,6 +253,13 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
     }
   };
 
+  // 구성원의 업무 완료 여부 확인
+  const isMemberTaskCompleted = (task: Task, memberId: string) => {
+    return task.completions.some(completion => 
+      completion.userId === memberId && completion.completed
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
@@ -209,93 +293,114 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
           업무가 없습니다.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {sortedTasks.map(task => {
-            const isCompleted = task.completions.some(c => c.completed);
-            const taskUrgent = isUrgent(task.dueDate) && !isCompleted;
+            // 모든 구성원이 완료했는지 확인
+            const allMembersCompleted = roomMembers.length > 0 && 
+              roomMembers.every(member => 
+                task.completions.some(completion => 
+                  completion.userId === member.userId && completion.completed
+                )
+              );
+            
+            const taskUrgent = isUrgent(task.dueDate) && !allMembersCompleted;
             
             return (
               <div 
                 key={task.id} 
                 className={`p-4 border rounded-lg transition-colors ${
-                  isCompleted 
+                  allMembersCompleted 
                     ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50' 
                     : taskUrgent
                     ? 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/10'
                     : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                 }`}
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 pt-1">
-                    <input
-                      type="checkbox"
-                      checked={isCompleted}
-                      onChange={() => handleTaskCompletion(task.id, isCompleted)}
-                      className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div className="flex-grow min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className={`text-lg font-medium ${isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>
-                        <Link href={`/tasks/${task.id}`} className="hover:underline">
-                          {task.title}
-                        </Link>
-                      </h3>
+                <div className="flex flex-col gap-3">
+                  {/* 업무 제목 및 태그 영역 - 작성자 정보를 한 줄로 표시 */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-grow">
+                      <div className="flex items-center gap-2 flex-nowrap">
+                        <h3 className={`text-lg font-medium mr-1 ${allMembersCompleted ? 'text-gray-500 dark:text-gray-400' : ''}`}>
+                          <Link href={`/tasks/${task.id}`} className="hover:underline">
+                            {task.title}
+                          </Link>
+                        </h3>
+                        
+                        {task.createdBy && (
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            {task.createdBy.name}
+                          </span>
+                        )}
+                      </div>
                       
-                      {taskUrgent && !isCompleted && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                          급함
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {taskUrgent && !allMembersCompleted && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                            급함
+                          </span>
+                        )}
+                        
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          {getCategoryLabel(task.category)}
                         </span>
-                      )}
-                      
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        {getCategoryLabel(task.category)}
-                      </span>
-                      
-                      {getPriorityBadge(task.priority)}
+                        
+                        {getPriorityBadge(task.priority)}
+                      </div>
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      {task.dueDate && (
-                        <span className="inline-flex items-center gap-1">
+                    <div className="flex-shrink-0">
+                      <Link href={`/tasks/${task.id}/edit?from=room_${roomId}`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
-                          {formatDate(task.dueDate)}
-                        </span>
-                      )}
-                      
-                      {task.location && (
-                        <span className="inline-flex items-center gap-1">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          {task.location}
-                        </span>
-                      )}
-                      
-                      {task.createdBy && (
-                        <span className="inline-flex items-center gap-1">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          {task.createdBy.name}
-                        </span>
-                      )}
-                      
+                          <span className="sr-only">편집</span>
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  
+                  {/* 정보 영역 */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {task.dueDate && (
+                      <span className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {formatDate(task.dueDate)}
+                      </span>
+                    )}
+                    
+                    {task.location && (
+                      <span className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {task.location}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* 파일 및 링크 영역 - 별도의 행으로 분리하고 정렬 개선 */}
+                  {(task.fileUrl || task.linkUrl) && (
+                    <div className="flex flex-wrap gap-3 mt-1">
                       {task.fileUrl && (
                         <a 
                           href={task.fileUrl} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-primary-600 hover:underline dark:text-primary-400"
+                          className="inline-flex items-center gap-1.5 px-2 py-1 text-sm text-primary-600 bg-primary-50 hover:bg-primary-100 rounded dark:bg-primary-900/20 dark:text-primary-400 dark:hover:bg-primary-900/30"
                           title="첨부 파일 다운로드"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                           </svg>
-                          파일
+                          첨부파일
                         </a>
                       )}
                       
@@ -304,27 +409,51 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
                           href={task.linkUrl} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-primary-600 hover:underline dark:text-primary-400"
+                          className="inline-flex items-center gap-1.5 px-2 py-1 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
                           title="관련 링크"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
-                          링크
+                          관련 링크
                         </a>
                       )}
                     </div>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Link href={`/tasks/${task.id}/edit?from=room_${roomId}`}>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        <span className="sr-only">편집</span>
-                      </Button>
-                    </Link>
-                  </div>
+                  )}
+
+                  {/* 구성원 체크박스 영역 - 취소선 제거 */}
+                  {roomMembers.length > 0 && (
+                    <div className="mt-2 pt-2 border-t">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">구성원 체크</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {roomMembers.map(member => {
+                          const isCompleted = isMemberTaskCompleted(task, member.userId);
+                          return (
+                            <div key={member.id} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`${task.id}-${member.userId}`}
+                                checked={isCompleted}
+                                onChange={() => handleTaskCompletion(task.id, member.userId, isCompleted)}
+                                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                disabled={member.userId !== session?.user.id && !allMembersCompleted}
+                              />
+                              <label 
+                                htmlFor={`${task.id}-${member.userId}`}
+                                className={`text-sm ${
+                                  isCompleted 
+                                    ? 'text-gray-700 dark:text-gray-300 font-medium' 
+                                    : 'text-gray-700 dark:text-gray-300'
+                                } ${member.userId === session?.user.id ? 'font-semibold' : ''}`}
+                              >
+                                {member.user.name}
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );
