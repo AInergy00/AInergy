@@ -15,6 +15,7 @@ export default function SettingsPage() {
     apiKeys: false,
     aiModels: false,
     account: false,
+    deleteAccount: false,
   });
 
   // API 키 상태
@@ -40,6 +41,12 @@ export default function SettingsPage() {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+  });
+
+  // 계정 삭제 확인 상태
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    show: false,
+    password: '',
   });
 
   // API 키 마스킹 함수
@@ -228,6 +235,45 @@ export default function SettingsPage() {
       alert('계정 정보를 업데이트하는 중 오류가 발생했습니다.');
     } finally {
       setLoading((prev) => ({ ...prev, account: false }));
+    }
+  };
+
+  // 계정 삭제
+  const deleteAccount = async () => {
+    if (!deleteConfirmation.password) {
+      alert('계정 삭제를 위해 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    if (!confirm('정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      return;
+    }
+
+    try {
+      setLoading((prev) => ({ ...prev, deleteAccount: true }));
+      const response = await fetch('/api/settings/account/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: deleteConfirmation.password,
+        }),
+      });
+
+      if (response.ok) {
+        alert('계정이 성공적으로 삭제되었습니다. 로그아웃됩니다.');
+        window.location.href = '/';
+      } else {
+        const data = await response.json();
+        alert(data.error || '계정 삭제 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('계정 삭제 오류:', error);
+      alert('계정을 삭제하는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading((prev) => ({ ...prev, deleteAccount: false }));
+      setDeleteConfirmation({ show: false, password: '' });
     }
   };
 
@@ -501,6 +547,53 @@ export default function SettingsPage() {
                 <Button onClick={saveAccountSettings} disabled={loading.account}>
                   {loading.account ? '저장 중...' : '계정 정보 저장'}
                 </Button>
+                
+                <div className="pt-6 mt-6 border-t border-red-200">
+                  <h3 className="text-lg font-medium mb-4 text-red-600">계정 삭제</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    계정을 삭제하면 모든 데이터가 영구적으로 제거됩니다. 이 작업은 되돌릴 수 없습니다.
+                  </p>
+                  
+                  {deleteConfirmation.show ? (
+                    <div className="space-y-4 p-4 border border-red-300 rounded-md bg-red-50">
+                      <p className="text-sm font-medium text-red-600">
+                        계정 삭제를 확인하려면 비밀번호를 입력하세요.
+                      </p>
+                      <div className="space-y-2">
+                        <label htmlFor="delete-password" className="block text-sm font-medium">비밀번호</label>
+                        <Input
+                          id="delete-password"
+                          type="password"
+                          value={deleteConfirmation.password}
+                          onChange={(e) => setDeleteConfirmation({ ...deleteConfirmation, password: e.target.value })}
+                          className="border-red-300"
+                        />
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="destructive" 
+                          onClick={deleteAccount} 
+                          disabled={loading.deleteAccount}
+                        >
+                          {loading.deleteAccount ? '처리 중...' : '계정 삭제 확인'}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setDeleteConfirmation({ show: false, password: '' })}
+                        >
+                          취소
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => setDeleteConfirmation({ ...deleteConfirmation, show: true })}
+                    >
+                      계정 삭제
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
