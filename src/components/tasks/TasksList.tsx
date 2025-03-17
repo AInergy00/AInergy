@@ -310,7 +310,7 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
                 key={task.id} 
                 className={`p-4 border rounded-lg transition-colors ${
                   allMembersCompleted 
-                    ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50' 
+                    ? 'border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-900/10' 
                     : taskUrgent
                     ? 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/10'
                     : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
@@ -321,8 +321,13 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
                   <div className="flex items-start justify-between">
                     <div className="flex-grow">
                       <div className="flex items-center gap-2 flex-nowrap">
-                        <h3 className={`text-lg font-medium mr-1 ${allMembersCompleted ? 'text-gray-500 dark:text-gray-400' : ''}`}>
-                          <Link href={`/tasks/${task.id}`} className="hover:underline">
+                        <h3 className={`text-lg font-medium mr-1 ${allMembersCompleted ? 'text-green-700 dark:text-green-500' : ''}`}>
+                          <Link href={`/tasks/${task.id}`} className="hover:underline flex items-center">
+                            {allMembersCompleted && (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-green-600 dark:text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            )}
                             {task.title}
                           </Link>
                         </h3>
@@ -435,18 +440,25 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
                                 id={`${task.id}-${member.userId}`}
                                 checked={isCompleted}
                                 onChange={() => handleTaskCompletion(task.id, member.userId, isCompleted)}
-                                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                className={`h-4 w-4 rounded border-gray-300 focus:ring-primary-500 ${
+                                  isCompleted ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-primary-600'
+                                }`}
                                 disabled={member.userId !== session?.user.id && !allMembersCompleted}
                               />
                               <label 
                                 htmlFor={`${task.id}-${member.userId}`}
-                                className={`text-sm ${
+                                className={`text-sm flex items-center ${
                                   isCompleted 
-                                    ? 'text-gray-700 dark:text-gray-300 font-medium' 
+                                    ? 'text-green-700 dark:text-green-500 font-medium' 
                                     : 'text-gray-700 dark:text-gray-300'
                                 } ${member.userId === session?.user.id ? 'font-semibold' : ''}`}
                               >
                                 {member.user.name}
+                                {isCompleted && (
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 text-green-600 dark:text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
                               </label>
                             </div>
                           );
