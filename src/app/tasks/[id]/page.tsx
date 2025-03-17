@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { formatDate, formatTime } from '@/lib/utils/date';
 import { getCategoryColor, getCategoryLabel, getPriorityLabel } from '@/lib/utils/theme';
 import { Button } from '@/components/ui/Button';
+import DeleteTaskButton from './DeleteTaskButton';
 
 export default async function TaskDetailPage({ params, searchParams }: { 
   params: { id: string },
@@ -18,8 +19,10 @@ export default async function TaskDetailPage({ params, searchParams }: {
     redirect('/login');
   }
 
-  // Next.js 15.2 이상에서는 params를 사용하기 전에 await해야 함
-  const { id } = await params;
+  // Next.js 15.2 이상에서는 params와 searchParams를 사용하기 전에 await해야 함
+  const paramsObj = await params;
+  const { id } = paramsObj;
+  
   const searchParamsObj = await searchParams;
   const { from } = searchParamsObj || {};
 
@@ -29,7 +32,7 @@ export default async function TaskDetailPage({ params, searchParams }: {
   // 업무 조회
   const task = await prisma.task.findUnique({
     where: {
-      id: id,
+      id,
     },
     include: {
       room: true,
@@ -80,9 +83,7 @@ export default async function TaskDetailPage({ params, searchParams }: {
               <Link href={`/tasks/${task.id}/edit`}>
                 <Button variant="outline">수정</Button>
               </Link>
-              <form action={`/api/tasks/${task.id}/delete`} method="POST">
-                <Button variant="destructive">삭제</Button>
-              </form>
+              <DeleteTaskButton taskId={task.id} backLink={backLink} />
             </div>
           )}
         </div>

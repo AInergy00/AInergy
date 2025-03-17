@@ -175,11 +175,17 @@ export default async function CalendarPage({
               return (
                 <div
                   key={dateStr}
-                  className={`bg-white dark:bg-gray-800 min-h-[120px] p-2 ${
+                  className={`bg-white dark:bg-gray-800 min-h-[120px] p-2 relative ${
                     isTodayDate ? 'ring-2 ring-primary-500 dark:ring-primary-400' : ''
                   } ${!isCurrentMonth ? 'opacity-50' : ''}`}
                 >
-                  <div className="flex justify-between items-start">
+                  {/* 날짜 셀 전체를 클릭할 수 있는 영역 */}
+                  <Link href={`/tasks/create?date=${dateStr}`} className="absolute inset-0 z-10">
+                    <span className="sr-only">일정 추가</span>
+                  </Link>
+                  
+                  {/* 날짜 표시 - 포인터 이벤트 없음 */}
+                  <div className="flex justify-between items-start relative z-20 pointer-events-none">
                     <span
                       className={`text-sm font-medium ${
                         isTodayDate
@@ -189,26 +195,10 @@ export default async function CalendarPage({
                     >
                       {format(day, 'd')}
                     </span>
-                    <Link href={`/tasks/create?date=${dateStr}`}>
-                      <button className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                      </button>
-                    </Link>
                   </div>
-                  <div className="mt-1 space-y-1 max-h-[90px] overflow-y-auto">
+                  
+                  {/* 태스크 목록 - 이벤트 허용 */}
+                  <div className="mt-1 space-y-1 max-h-[90px] overflow-y-auto relative z-20 pointer-events-auto">
                     {dayTasks.slice(0, 3).map((task) => {
                       const isCompleted = task.completions.length > 0 && task.completions[0].completed;
                       return (

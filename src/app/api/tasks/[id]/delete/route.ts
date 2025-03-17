@@ -40,7 +40,8 @@ export async function POST(
       where: { id: taskId },
     });
 
-    return NextResponse.redirect('/tasks');
+    // 리다이렉트 대신 성공 응답 반환
+    return NextResponse.json({ success: true, message: '업무가 삭제되었습니다.' }, { status: 200 });
   } catch (error) {
     console.error('업무 삭제 중 오류 발생:', error);
     return NextResponse.json(
