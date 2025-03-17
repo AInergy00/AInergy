@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/Button';
 
-export default function EditRoomPage({ params }: { params: { id: string } }) {
+export default function EditRoomPage() {
   const router = useRouter();
-  const roomId = params.id;
+  const params = useParams();
+  const roomId = Array.isArray(params.id) ? params.id[0] : params.id;
   
   const [formData, setFormData] = useState({
     name: '',
@@ -131,7 +132,7 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
               뒤로
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold">스터디룸 설정</h1>
+          <h1 className="text-2xl font-bold">협업 공간 설정</h1>
         </div>
         
         {error && (
@@ -152,7 +153,7 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
               value={formData.name}
               onChange={handleChange}
               className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="스터디룸 이름을 입력하세요"
+              placeholder="협업 공간 이름을 입력하세요"
             />
           </div>
           
@@ -166,7 +167,7 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
               value={formData.description}
               onChange={handleChange}
               className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="스터디룸에 대한 설명을 입력하세요"
+              placeholder="협업 공간에 대한 설명을 입력하세요"
               rows={3}
             />
           </div>

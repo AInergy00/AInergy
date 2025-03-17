@@ -143,7 +143,7 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
       case 'BUSINESS_TRIP': return '출장';
       case 'TRAINING': return '연수';
       case 'EVENT': return '행사';
-      case 'CLASSROOM': return '수업';
+      case 'CLASSROOM': return '담임';
       case 'TASK': return '업무';
       case 'OTHER': return '기타';
       default: return category;

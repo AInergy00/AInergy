@@ -7,7 +7,6 @@ import { prisma } from '@/lib/db';
 import { formatDate, formatTime } from '@/lib/utils/date';
 import { getCategoryColor, getCategoryLabel, getPriorityLabel } from '@/lib/utils/theme';
 import { Button } from '@/components/ui/Button';
-import DeleteTaskButton from './DeleteTaskButton';
 
 export default async function TaskDetailPage({ params, searchParams }: { 
   params: { id: string },
@@ -83,7 +82,9 @@ export default async function TaskDetailPage({ params, searchParams }: {
               <Link href={`/tasks/${task.id}/edit`}>
                 <Button variant="outline">수정</Button>
               </Link>
-              <DeleteTaskButton taskId={task.id} backLink={backLink} />
+              <form action={`/api/tasks/${task.id}/delete`} method="POST">
+                <Button type="submit" variant="destructive">삭제</Button>
+              </form>
             </div>
           )}
         </div>
@@ -163,7 +164,7 @@ export default async function TaskDetailPage({ params, searchParams }: {
                   
                   {task.room && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">공유 방</dt>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">협업 공간</dt>
                       <dd className="mt-1 text-gray-900 dark:text-white">
                         <Link href={`/rooms/${task.room.id}`} className="text-primary-600 hover:underline dark:text-primary-400">
                           {task.room.name}

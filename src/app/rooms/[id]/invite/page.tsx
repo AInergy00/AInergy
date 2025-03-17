@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/Button';
 
-export default function InvitePage({ params }: { params: { id: string } }) {
+export default function InvitePage() {
   const router = useRouter();
-  const roomId = params.id;
+  const params = useParams();
+  const roomId = Array.isArray(params.id) ? params.id[0] : params.id;
   
   const [room, setRoom] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -24,14 +25,14 @@ export default function InvitePage({ params }: { params: { id: string } }) {
         
         if (!response.ok) {
           const data = await response.json();
-          throw new Error(data.error || '방 정보를 불러오는데 실패했습니다.');
+          throw new Error(data.error || '협업 공간 정보를 불러오는데 실패했습니다.');
         }
         
         const roomData = await response.json();
         setRoom(roomData);
-        setInviteCode(roomData.inviteCode || '');
+        setInviteCode(roomData.password || '');
       } catch (err) {
-        setError(err instanceof Error ? err.message : '방 정보를 불러오는데 실패했습니다.');
+        setError(err instanceof Error ? err.message : '협업 공간 정보를 불러오는데 실패했습니다.');
       } finally {
         setLoading(false);
       }
@@ -62,7 +63,7 @@ export default function InvitePage({ params }: { params: { id: string } }) {
       
       const updatedRoom = await response.json();
       setRoom(updatedRoom);
-      setInviteCode(updatedRoom.inviteCode);
+      setInviteCode(updatedRoom.inviteCode || updatedRoom.password || '');
     } catch (err) {
       setError(err instanceof Error ? err.message : '초대 코드 생성에 실패했습니다.');
     } finally {
@@ -144,7 +145,7 @@ export default function InvitePage({ params }: { params: { id: string } }) {
           <div>
             <h2 className="text-lg font-medium mb-2">초대 코드</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              다른 사람은 이 코드를 사용하여 방에 참여할 수 있습니다.
+              다른 사람은 이 코드를 사용하여 협업 공간에 참여할 수 있습니다.
             </p>
             
             <div className="flex space-x-2">

@@ -99,10 +99,26 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { name, description, password } = await request.json();
+    // JSON 파싱 시 오류 처리를 위한 별도 try-catch
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (parseError) {
+      console.error('JSON 파싱 오류:', parseError);
+      return NextResponse.json(
+        { error: '잘못된 요청 데이터 형식입니다.' },
+        { status: 400 }
+      );
+    }
+
+    const { name, description, isPrivate, inviteCode } = requestData;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: '방 이름은 필수입니다.' }, { status: 400 });
+    }
+
+    if (isPrivate && !inviteCode) {
+      return NextResponse.json({ error: '비공개 방은 초대 코드가 필요합니다.' }, { status: 400 });
     }
 
     // 트랜잭션으로 방 생성 및 사용자를 관리자로 추가
@@ -112,7 +128,7 @@ export async function POST(request: NextRequest) {
         data: {
           name,
           description,
-          password
+          password: isPrivate ? inviteCode : null
         }
       });
 

@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
+import { useSession, signOut } from 'next-auth/react';
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
+  const { data: session, status } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
@@ -15,6 +17,12 @@ export function Navbar() {
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: true, callbackUrl: '/' });
+  };
+
+  const isLoggedIn = status === 'authenticated';
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-20 bg-card border-b">
@@ -46,18 +54,37 @@ export function Navbar() {
               )}
             </button>
 
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-md text-sm font-medium hover:bg-secondary"
-            >
-              로그인
-            </Link>
-            <Link
-              href="/register"
-              className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
-            >
-              회원가입
-            </Link>
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="px-4 py-2 rounded-md text-sm font-medium hover:bg-secondary"
+                >
+                  프로필
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="px-4 py-2 rounded-md text-sm font-medium hover:bg-secondary"
+                >
+                  로그인
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+                >
+                  회원가입
+                </Link>
+              </>
+            )}
           </div>
 
           {/* 모바일 메뉴 버튼 */}
@@ -107,20 +134,43 @@ export function Navbar() {
           className="md:hidden border-t"
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
-            <Link
-              href="/login"
-              className="block px-3 py-2 rounded-md hover:bg-secondary"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              로그인
-            </Link>
-            <Link
-              href="/register"
-              className="block px-3 py-2 rounded-md hover:bg-secondary"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              회원가입
-            </Link>
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="block px-3 py-2 rounded-md hover:bg-secondary"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  프로필
+                </Link>
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-3 py-2 rounded-md hover:bg-secondary"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="block px-3 py-2 rounded-md hover:bg-secondary"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  로그인
+                </Link>
+                <Link
+                  href="/register"
+                  className="block px-3 py-2 rounded-md hover:bg-secondary"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  회원가입
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

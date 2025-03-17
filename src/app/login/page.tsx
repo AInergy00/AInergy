@@ -37,7 +37,7 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.href = '/rooms';
+      window.location.href = '/dashboard';
     } catch (error) {
       setError('로그인 중 오류가 발생했습니다.');
       console.error('로그인 오류:', error);

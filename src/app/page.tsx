@@ -82,7 +82,7 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="bg-background/50 p-4 rounded-lg">
-                        <h3 className="font-medium mb-2">공유 방</h3>
+                        <h3 className="font-medium mb-2">협업 공간</h3>
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium">
                             3A
@@ -125,7 +125,7 @@ export default function Home() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold mb-2">협업 공간</h3>
-                <p className="text-muted-foreground">학급, 동아리, 프로젝트별로 공유 방을 만들어 효율적인 협업과 소통이 가능합니다.</p>
+                <p className="text-muted-foreground">학급, 동아리, 프로젝트별로 협업 공간을 만들어 효율적인 협업과 소통이 가능합니다.</p>
               </div>
               
               <div className="bg-card p-6 rounded-xl shadow-sm border">

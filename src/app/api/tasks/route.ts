@@ -214,6 +214,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // roomId가 제공된 경우 자동으로 isShared를 true로 설정
+    const shouldShare = roomId && roomId.trim() !== '' ? true : isShared ?? false;
+    
+    console.log('업무 생성 - roomId:', roomId, 'isShared:', shouldShare);
+
     const task = await prisma.task.create({
       data: {
         title,
@@ -226,7 +231,7 @@ export async function POST(request: NextRequest) {
         location: location || '',
         materials: Array.isArray(materials) ? '' : (materials || ''),
         notes: notes || '',
-        isShared: isShared ?? false,
+        isShared: shouldShare,
         userId: session.user.id,
         ...(roomId && roomId.trim() !== '' && {
           room: {

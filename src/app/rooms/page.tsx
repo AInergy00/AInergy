@@ -91,7 +91,7 @@ export default function RoomsPage() {
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">공유 방</h1>
+          <h1 className="text-2xl font-bold">협업 공간</h1>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Link href="/rooms/create">
               <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
@@ -107,7 +107,7 @@ export default function RoomsPage() {
                     clipRule="evenodd"
                   />
                 </svg>
-                방 만들기
+                공간 만들기
               </Button>
             </Link>
           </motion.div>
@@ -126,13 +126,13 @@ export default function RoomsPage() {
               </svg>
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold">아직 생성하거나 참여한 공유 방이 없습니다.</h3>
-              <p className="text-muted-foreground">새로운 방을 만들고 동료들과 함께 협업해보세요!</p>
+              <h3 className="text-xl font-semibold">아직 생성하거나 참여한 협업 공간이 없습니다.</h3>
+              <p className="text-muted-foreground">새로운 공간을 만들고 동료들과 함께 협업해보세요!</p>
             </div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link href="/rooms/create">
                 <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  새 방 만들기
+                  새 공간 만들기
                 </Button>
               </Link>
             </motion.div>
@@ -142,7 +142,7 @@ export default function RoomsPage() {
             {myRooms.length > 0 && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">
-                  내가 만든 방
+                  내가 만든 공간
                 </h2>
                 <motion.div 
                   className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
@@ -164,7 +164,7 @@ export default function RoomsPage() {
             {joinedRooms.length > 0 && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">
-                  참여 중인 방
+                  참여 중인 공간
                 </h2>
                 <motion.div 
                   className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"

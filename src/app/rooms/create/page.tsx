@@ -80,7 +80,7 @@ export default function CreateRoomPage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <h1 className="text-2xl font-bold mb-4">새 스터디룸 만들기</h1>
+        <h1 className="text-2xl font-bold mb-4">새 협업 공간 만들기</h1>
         
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
@@ -100,7 +100,7 @@ export default function CreateRoomPage() {
               value={formData.name}
               onChange={handleChange}
               className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="스터디룸 이름을 입력하세요"
+              placeholder="협업 공간 이름을 입력하세요"
             />
           </div>
           
@@ -114,7 +114,7 @@ export default function CreateRoomPage() {
               value={formData.description}
               onChange={handleChange}
               className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="스터디룸에 대한 설명을 입력하세요"
+              placeholder="협업 공간에 대한 설명을 입력하세요"
               rows={3}
             />
           </div>

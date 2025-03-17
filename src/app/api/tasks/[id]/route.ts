@@ -36,9 +36,13 @@ export async function GET(
   }
 
   try {
+    // params 객체를 사용하기 전에 await로 해결
+    const paramsObj = await params;
+    const id = paramsObj.id;
+
     const task = await prisma.task.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       include: {
         room: {
@@ -94,10 +98,14 @@ export async function PUT(
   }
 
   try {
+    // params 객체를 사용하기 전에 await로 해결
+    const paramsObj = await params;
+    const id = paramsObj.id;
+    
     // 기존 업무 조회
     const existingTask = await prisma.task.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 

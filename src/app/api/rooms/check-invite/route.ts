@@ -18,23 +18,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '초대 코드가 필요합니다.' }, { status: 400 });
     }
 
-    // 초대 코드로 방 조회
+    // 초대 코드로 방 조회 (password 필드 사용)
     const room = await prisma.room.findFirst({
       where: {
-        inviteCode: code,
+        password: code,
       },
       include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
         members: {
           where: {
             userId: session.user.id,
           },
+        },
+        // owner 관련 정보는 RoomMember에서 admin 역할을 가진 사용자를 찾아서 조회
+        members: {
+          where: {
+            role: 'admin',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          take: 1,
         },
       },
     });
@@ -44,13 +53,23 @@ export async function GET(request: NextRequest) {
     }
 
     // 이미 참여한 멤버인지 확인
-    if (room.members.length > 0) {
-      return NextResponse.json({ error: '이미 참여한 방입니다.' }, { status: 400 });
+    const existingMember = await prisma.roomMember.findFirst({
+      where: {
+        userId: session.user.id,
+        roomId: room.id,
+      },
+    });
+
+    if (existingMember) {
+      return NextResponse.json({ error: '이미 참여한 공간입니다.' }, { status: 400 });
     }
 
+    // 방장 정보 확인
+    const admin = room.members?.[0];
+    
     // 방장인지 확인
-    if (room.ownerId === session.user.id) {
-      return NextResponse.json({ error: '본인이 방장인 방입니다.' }, { status: 400 });
+    if (admin?.user?.id === session.user.id) {
+      return NextResponse.json({ error: '본인이 관리자인 공간입니다.' }, { status: 400 });
     }
 
     // 개인 정보 보호를 위해 일부 정보만 제공
@@ -58,8 +77,8 @@ export async function GET(request: NextRequest) {
       id: room.id,
       name: room.name,
       description: room.description,
-      isPrivate: room.isPrivate,
-      ownerName: room.owner.name,
+      isPrivate: !!room.password,
+      ownerName: admin?.user?.name || '알 수 없음',
     });
   } catch (error) {
     console.error('초대 코드 확인 중 오류 발생:', error);

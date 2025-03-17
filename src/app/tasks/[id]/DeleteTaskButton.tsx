@@ -4,7 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 
-export default function DeleteTaskButton({ taskId, backLink }: { taskId: string, backLink: string }) {
+interface DeleteTaskButtonProps {
+  taskId: string;
+  backLink: string;
+}
+
+export default function DeleteTaskButton({ taskId, backLink }: DeleteTaskButtonProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 

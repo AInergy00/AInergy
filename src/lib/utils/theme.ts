@@ -48,16 +48,18 @@ export function getCategoryColor(category: string): string {
   switch (category) {
     case 'MEETING':
       return '#3B82F6'; // 파란색
-    case 'EVENT':
-      return '#10B981'; // 초록색
-    case 'TASK':
-      return '#F59E0B'; // 주황색
-    case 'EDUCATION':
+    case 'BUSINESS_TRIP':
       return '#8B5CF6'; // 보라색
-    case 'PERSONAL':
-      return '#EC4899'; // 분홍색
-    case 'OTHER':
+    case 'TRAINING':
+      return '#10B981'; // 초록색
+    case 'EVENT':
+      return '#F59E0B'; // 주황색
+    case 'CLASSROOM':
+      return '#EF4444'; // 빨간색
+    case 'TASK':
       return '#6B7280'; // 회색
+    case 'OTHER':
+      return '#9CA3AF'; // 연한 회색
     default:
       return '#6B7280'; // 기본 회색
   }
@@ -72,14 +74,16 @@ export function getCategoryLabel(category: string): string {
   switch (category) {
     case 'MEETING':
       return '회의';
+    case 'BUSINESS_TRIP':
+      return '출장';
+    case 'TRAINING':
+      return '연수';
     case 'EVENT':
       return '행사';
+    case 'CLASSROOM':
+      return '담임';
     case 'TASK':
       return '업무';
-    case 'EDUCATION':
-      return '교육';
-    case 'PERSONAL':
-      return '개인';
     case 'OTHER':
       return '기타';
     default:

@@ -46,6 +46,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/login',
+    signOut: '/login',
   },
   callbacks: {
     async session({ session, token }) {
@@ -60,8 +61,20 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name || null;
+        token.email = user.email || null;
+        token.picture = (user as any).image || null;
       }
       return token;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url === baseUrl || url.startsWith(baseUrl)) {
+        return `${baseUrl}/dashboard`;
+      }
+      else if (url.startsWith('http')) {
+        return url;
+      }
+      return baseUrl;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,

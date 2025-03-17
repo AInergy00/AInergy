@@ -113,6 +113,31 @@
   h3 {
     @apply text-xl lg:text-2xl;
   }
+  
+  /* 아이콘 크기 제한 */
+  svg {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  
+  body svg {
+    max-width: 24px !important;
+    max-height: 24px !important;
+  }
+  
+  /* 특정 경로에 대한 아이콘 크기 추가 제한 */
+  .home-icon svg, 
+  .dashboard-icon svg,
+  svg path[d*="10.707 2.293a1 1 0 00-1.414 0l-7 7"],
+  svg path[d*="path d="],
+  svg[fill="currentColor"] {
+    max-width: 24px !important;
+    max-height: 24px !important;
+    width: 24px !important;
+    height: 24px !important;
+  }
 }
 
 .card {

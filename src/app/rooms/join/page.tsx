@@ -100,10 +100,10 @@ export default function JoinRoomPage() {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
               </svg>
-              스터디룸 목록
+              협업 공간 목록
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold">스터디룸 참여</h1>
+          <h1 className="text-2xl font-bold">협업 공간 참여</h1>
         </div>
         
         {error && (
@@ -115,7 +115,7 @@ export default function JoinRoomPage() {
         {!room ? (
           <div>
             <p className="mb-4 text-gray-600 dark:text-gray-300">
-              초대 코드를 입력하여 스터디룸에 참여하세요.
+              초대 코드를 입력하여 협업 공간에 참여하세요.
             </p>
             
             <div className="mb-4">
@@ -149,7 +149,7 @@ export default function JoinRoomPage() {
                 <p className="text-gray-600 dark:text-gray-300 mb-2">{room.description}</p>
               )}
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                방장: {room.owner.name}
+                방장: {room.ownerName || '알 수 없음'}
               </div>
             </div>
             

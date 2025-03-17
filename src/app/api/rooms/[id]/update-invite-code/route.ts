@@ -15,40 +15,80 @@ export async function POST(
 
   try {
     const roomId = params.id;
-    const { inviteCode } = await request.json();
+    
+    // JSON 파싱 오류 처리
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (parseError) {
+      console.error('JSON 파싱 오류:', parseError);
+      return NextResponse.json(
+        { error: '잘못된 요청 데이터 형식입니다.' },
+        { status: 400 }
+      );
+    }
+    
+    const { inviteCode } = requestData;
 
     if (!inviteCode) {
       return NextResponse.json({ error: '초대 코드가 필요합니다.' }, { status: 400 });
     }
 
-    // 방 존재 확인
-    const room = await prisma.room.findUnique({
+    // 방 존재 확인 및 현재 사용자의 권한 확인
+    const roomWithMember = await prisma.room.findUnique({
       where: {
         id: roomId,
       },
+      include: {
+        members: {
+          where: {
+            userId: session.user.id,
+            role: 'admin', // 관리자 권한을 가진 사용자만 확인
+          },
+        },
+      },
     });
 
-    if (!room) {
-      return NextResponse.json({ error: '방을 찾을 수 없습니다.' }, { status: 404 });
+    if (!roomWithMember) {
+      return NextResponse.json({ error: '협업 공간을 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    // 권한 확인 (방장만 초대 코드 변경 가능)
-    if (room.ownerId !== session.user.id) {
+    // 권한 확인 (admin 역할을 가진 사용자만 초대 코드 변경 가능)
+    if (roomWithMember.members.length === 0) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
     }
 
-    // 초대 코드 업데이트
+    // 초대 코드 업데이트 (password 필드 사용)
     const updatedRoom = await prisma.room.update({
       where: {
         id: roomId,
       },
       data: {
-        inviteCode,
-        isPrivate: true, // 초대 코드를 설정하면 비공개 방으로 자동 전환
+        password: inviteCode,
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(updatedRoom);
+    return NextResponse.json({
+      id: updatedRoom.id,
+      name: updatedRoom.name,
+      description: updatedRoom.description,
+      inviteCode: updatedRoom.password, // password를 inviteCode로 매핑
+      members: updatedRoom.members,
+      createdAt: updatedRoom.createdAt,
+      updatedAt: updatedRoom.updatedAt,
+    });
   } catch (error) {
     console.error('초대 코드 업데이트 중 오류 발생:', error);
     return NextResponse.json(
