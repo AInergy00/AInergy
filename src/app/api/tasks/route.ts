@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
 import { parseDateTime } from '@/lib/utils/date';
+import { TaskCategory, TaskPriority } from '@prisma/client';
 
 // 할일 목록 조회
 export async function GET(request: NextRequest) {
@@ -128,6 +129,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 카테고리와 중요도 값 검증
+    const validCategories = ['MEETING', 'BUSINESS_TRIP', 'TRAINING', 'EVENT', 'CLASSROOM', 'TASK', 'OTHER'];
+    const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+
+    if (category && !validCategories.includes(category)) {
+      return NextResponse.json({ error: '유효하지 않은 분류입니다.' }, { status: 400 });
+    }
+
+    if (priority && !validPriorities.includes(priority)) {
+      return NextResponse.json({ error: '유효하지 않은 중요도입니다.' }, { status: 400 });
+    }
+
     // 날짜 검증
     let dueDateObj = null;
     if (dueDate) {
@@ -160,7 +173,13 @@ export async function POST(request: NextRequest) {
       try {
         const dateCopy = new Date(baseDate);
         const [hours, minutes] = timeStr.split(':').map(Number);
-        dateCopy.setHours(hours, minutes, 0, 0);
+        
+        // 분을 10분 단위로 반올림
+        const roundedMinutes = Math.round(minutes / 10) * 10;
+        // 59분 초과되면 00분으로 조정
+        const adjustedMinutes = roundedMinutes >= 60 ? 0 : roundedMinutes;
+        
+        dateCopy.setHours(hours, adjustedMinutes, 0, 0);
         
         if (isNaN(dateCopy.getTime())) {
           console.error('최종 날짜 오류:', dateCopy);
@@ -199,8 +218,8 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description: description || '',
-        category: category || 'GENERAL',
-        priority: priority || 'MEDIUM',
+        category: category as TaskCategory || 'TASK',
+        priority: priority as TaskPriority || 'MEDIUM',
         dueDate: dueDateObj,
         startTime: parseTimeToDate(startTime, dueDateObj),
         endTime: parseTimeToDate(endTime, dueDateObj),

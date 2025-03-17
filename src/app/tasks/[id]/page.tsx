@@ -8,7 +8,10 @@ import { formatDate, formatTime } from '@/lib/utils/date';
 import { getCategoryColor, getCategoryLabel, getPriorityLabel } from '@/lib/utils/theme';
 import { Button } from '@/components/ui/Button';
 
-export default async function TaskDetailPage({ params }: { params: { id: string } }) {
+export default async function TaskDetailPage({ params, searchParams }: { 
+  params: { id: string },
+  searchParams: { from?: string } 
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -17,6 +20,11 @@ export default async function TaskDetailPage({ params }: { params: { id: string 
 
   // Next.js 15.2 이상에서는 params를 사용하기 전에 await해야 함
   const { id } = await params;
+  const searchParamsObj = await searchParams;
+  const { from } = searchParamsObj || {};
+
+  // 뒤로가기 링크 결정
+  const backLink = from === 'calendar' ? '/calendar' : '/tasks';
 
   // 업무 조회
   const task = await prisma.task.findUnique({
@@ -57,7 +65,7 @@ export default async function TaskDetailPage({ params }: { params: { id: string 
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <Link href="/tasks">
+            <Link href={backLink}>
               <Button variant="ghost" size="sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />

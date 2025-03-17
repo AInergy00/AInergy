@@ -212,7 +212,7 @@ export default async function CalendarPage({
                     {dayTasks.slice(0, 3).map((task) => {
                       const isCompleted = task.completions.length > 0 && task.completions[0].completed;
                       return (
-                        <Link key={task.id} href={`/tasks/${task.id}`}>
+                        <Link key={task.id} href={`/tasks/${task.id}?from=calendar`}>
                           <div
                             className={`px-2 py-1 text-xs rounded-md truncate ${
                               isCompleted

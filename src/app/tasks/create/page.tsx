@@ -34,6 +34,26 @@ export default function CreateTaskPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    
+    // 시간 필드인 경우 10분 단위로 조정
+    if ((name === 'startTime' || name === 'endTime') && value) {
+      const [hours, minutes] = value.split(':').map(Number);
+      if (!isNaN(hours) && !isNaN(minutes)) {
+        // 분을 10분 단위로 반올림
+        const roundedMinutes = Math.round(minutes / 10) * 10;
+        // 59분 초과되면 00분으로 조정
+        const adjustedMinutes = roundedMinutes >= 60 ? 0 : roundedMinutes;
+        // 시간 형식으로 변환 (두 자리 숫자로 맞춤)
+        const formattedTime = `${hours.toString().padStart(2, '0')}:${adjustedMinutes.toString().padStart(2, '0')}`;
+        
+        setFormData({
+          ...formData,
+          [name]: formattedTime,
+        });
+        return;
+      }
+    }
+    
     setFormData({
       ...formData,
       [name]: value,
@@ -252,15 +272,53 @@ export default function CreateTaskPage() {
                   시작 시간
                 </label>
                 <div className="mt-1">
-                  <input
-                    id="startTime"
-                    name="startTime"
-                    type="time"
-                    step="600"
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
-                    value={formData.startTime}
-                    onChange={handleChange}
-                  />
+                  <div className="flex items-center">
+                    <select
+                      id="startTime-hour"
+                      name="startTime-hour"
+                      className="appearance-none block w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-l-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
+                      value={formData.startTime ? formData.startTime.split(':')[0] : ''}
+                      onChange={(e) => {
+                        const hours = e.target.value;
+                        const mins = formData.startTime ? formData.startTime.split(':')[1] : '00';
+                        const newTime = hours ? `${hours}:${mins}` : '';
+                        setFormData({
+                          ...formData,
+                          startTime: newTime
+                        });
+                      }}
+                    >
+                      <option value="">시</option>
+                      {Array.from({length: 24}, (_, i) => i).map(hour => (
+                        <option key={hour} value={hour.toString().padStart(2, '0')}>
+                          {hour.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mx-1">:</span>
+                    <select
+                      id="startTime-minute"
+                      name="startTime-minute"
+                      className="appearance-none block w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-r-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
+                      value={formData.startTime ? formData.startTime.split(':')[1] : ''}
+                      onChange={(e) => {
+                        const mins = e.target.value;
+                        const hours = formData.startTime ? formData.startTime.split(':')[0] : '00';
+                        const newTime = hours ? `${hours}:${mins}` : '';
+                        setFormData({
+                          ...formData,
+                          startTime: newTime
+                        });
+                      }}
+                    >
+                      <option value="">분</option>
+                      {Array.from({length: 6}, (_, i) => i * 10).map(minute => (
+                        <option key={minute} value={minute.toString().padStart(2, '0')}>
+                          {minute.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -269,15 +327,53 @@ export default function CreateTaskPage() {
                   종료 시간
                 </label>
                 <div className="mt-1">
-                  <input
-                    id="endTime"
-                    name="endTime"
-                    type="time"
-                    step="600"
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
-                    value={formData.endTime}
-                    onChange={handleChange}
-                  />
+                  <div className="flex items-center">
+                    <select
+                      id="endTime-hour"
+                      name="endTime-hour"
+                      className="appearance-none block w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-l-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
+                      value={formData.endTime ? formData.endTime.split(':')[0] : ''}
+                      onChange={(e) => {
+                        const hours = e.target.value;
+                        const mins = formData.endTime ? formData.endTime.split(':')[1] : '00';
+                        const newTime = hours ? `${hours}:${mins}` : '';
+                        setFormData({
+                          ...formData,
+                          endTime: newTime
+                        });
+                      }}
+                    >
+                      <option value="">시</option>
+                      {Array.from({length: 24}, (_, i) => i).map(hour => (
+                        <option key={hour} value={hour.toString().padStart(2, '0')}>
+                          {hour.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mx-1">:</span>
+                    <select
+                      id="endTime-minute"
+                      name="endTime-minute"
+                      className="appearance-none block w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-r-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
+                      value={formData.endTime ? formData.endTime.split(':')[1] : ''}
+                      onChange={(e) => {
+                        const mins = e.target.value;
+                        const hours = formData.endTime ? formData.endTime.split(':')[0] : '00';
+                        const newTime = hours ? `${hours}:${mins}` : '';
+                        setFormData({
+                          ...formData,
+                          endTime: newTime
+                        });
+                      }}
+                    >
+                      <option value="">분</option>
+                      {Array.from({length: 6}, (_, i) => i * 10).map(minute => (
+                        <option key={minute} value={minute.toString().padStart(2, '0')}>
+                          {minute.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 

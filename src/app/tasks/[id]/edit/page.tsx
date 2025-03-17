@@ -7,17 +7,26 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { format } from 'date-fns';
 
-export default async function EditTaskPage({ params }: { params: { id: string } }) {
+export default async function EditTaskPage({ params, searchParams }: { 
+  params: { id: string },
+  searchParams: { from?: string }
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
     redirect('/login');
   }
 
+  const searchParamsObj = await searchParams;
+  const { from } = searchParamsObj || {};
+  
+  const paramsObj = await params;
+  const { id } = paramsObj;
+
   // 업무 조회
   const task = await prisma.task.findUnique({
     where: {
-      id: params.id,
+      id,
     },
     include: {
       room: true,
@@ -36,16 +45,11 @@ export default async function EditTaskPage({ params }: { params: { id: string } 
   // 사용자의 방 목록 조회
   const rooms = await prisma.room.findMany({
     where: {
-      OR: [
-        { ownerId: session.user.id },
-        {
-          members: {
-            some: {
-              userId: session.user.id,
-            },
-          },
+      members: {
+        some: {
+          userId: session.user.id,
         },
-      ],
+      },
     },
     orderBy: {
       name: 'asc',
@@ -71,7 +75,7 @@ export default async function EditTaskPage({ params }: { params: { id: string } 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Link href={`/tasks/${task.id}`}>
+            <Link href={`/tasks/${task.id}${from ? `?from=${from}` : ''}`}>
               <Button variant="ghost" size="sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -86,6 +90,7 @@ export default async function EditTaskPage({ params }: { params: { id: string } 
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
           <form action="/api/tasks/update" method="POST" className="p-6 space-y-6">
             <input type="hidden" name="id" value={task.id} />
+            {from && <input type="hidden" name="from" value={from} />}
             
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-4">
@@ -173,28 +178,70 @@ export default async function EditTaskPage({ params }: { params: { id: string } 
                     <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       시작 시간
                     </label>
-                    <input
-                      type="time"
-                      step="600"
-                      id="startTime"
-                      name="startTime"
-                      defaultValue={formattedStartTime}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    />
+                    <div className="flex items-center mt-1">
+                      <select
+                        id="startTime-hour"
+                        name="startTime-hour"
+                        defaultValue={formattedStartTime ? formattedStartTime.split(':')[0] : ''}
+                        className="w-1/2 rounded-l-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">시</option>
+                        {Array.from({length: 24}, (_, i) => i).map(hour => (
+                          <option key={hour} value={hour.toString().padStart(2, '0')}>
+                            {hour.toString().padStart(2, '0')}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="mx-1">:</span>
+                      <select
+                        id="startTime-minute"
+                        name="startTime-minute"
+                        defaultValue={formattedStartTime ? formattedStartTime.split(':')[1] : ''}
+                        className="w-1/2 rounded-r-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">분</option>
+                        {Array.from({length: 6}, (_, i) => i * 10).map(minute => (
+                          <option key={minute} value={minute.toString().padStart(2, '0')}>
+                            {minute.toString().padStart(2, '0')}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   
                   <div>
                     <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       종료 시간
                     </label>
-                    <input
-                      type="time"
-                      step="600"
-                      id="endTime"
-                      name="endTime"
-                      defaultValue={formattedEndTime}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    />
+                    <div className="flex items-center mt-1">
+                      <select
+                        id="endTime-hour"
+                        name="endTime-hour"
+                        defaultValue={formattedEndTime ? formattedEndTime.split(':')[0] : ''}
+                        className="w-1/2 rounded-l-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">시</option>
+                        {Array.from({length: 24}, (_, i) => i).map(hour => (
+                          <option key={hour} value={hour.toString().padStart(2, '0')}>
+                            {hour.toString().padStart(2, '0')}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="mx-1">:</span>
+                      <select
+                        id="endTime-minute"
+                        name="endTime-minute"
+                        defaultValue={formattedEndTime ? formattedEndTime.split(':')[1] : ''}
+                        className="w-1/2 rounded-r-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">분</option>
+                        {Array.from({length: 6}, (_, i) => i * 10).map(minute => (
+                          <option key={minute} value={minute.toString().padStart(2, '0')}>
+                            {minute.toString().padStart(2, '0')}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
                 
