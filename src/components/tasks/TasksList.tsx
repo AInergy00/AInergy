@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/Button';
+import { getCategoryLabel } from '@/lib/utils/theme';
+import { formatDistanceToNow, isFuture, isWithinInterval, subDays } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface TaskCompletion {
   id: string;
@@ -18,7 +21,18 @@ interface Task {
   priority: string;
   status: string;
   dueDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  fileUrl: string | null;
+  linkUrl: string | null;
+  location: string | null;
+  materials: string | null;
+  notes: string | null;
   createdAt: string;
+  createdBy?: {
+    id: string;
+    name: string;
+  };
   completions: TaskCompletion[];
 }
 
@@ -63,6 +77,18 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
     
     return new Date(bCompletedAt).getTime() - new Date(aCompletedAt).getTime();
   });
+
+  // 업무 긴급 여부 확인 (제출 마감 2일 전부터 당일까지)
+  const isUrgent = (dueDate: string | null) => {
+    if (!dueDate) return false;
+    
+    const today = new Date();
+    const deadline = new Date(dueDate);
+    const twoDaysBefore = subDays(deadline, 2);
+    
+    return isWithinInterval(today, { start: twoDaysBefore, end: deadline }) || 
+           (isFuture(deadline) && formatDistanceToNow(deadline, { locale: ko }).includes('하루'));
+  };
 
   const handleTaskCompletion = async (taskId: string, isCompleted: boolean) => {
     try {
@@ -152,25 +178,25 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div className="flex space-x-2">
-          <Button 
-            variant={filter === 'all' ? 'default' : 'outline'} 
+          <Button
             size="sm"
+            variant={filter === 'all' ? 'default' : 'outline'}
             onClick={() => setFilter('all')}
           >
             전체
           </Button>
-          <Button 
-            variant={filter === 'incomplete' ? 'default' : 'outline'} 
+          <Button
             size="sm"
+            variant={filter === 'incomplete' ? 'default' : 'outline'}
             onClick={() => setFilter('incomplete')}
           >
             미완료
           </Button>
-          <Button 
-            variant={filter === 'complete' ? 'default' : 'outline'} 
+          <Button
             size="sm"
+            variant={filter === 'complete' ? 'default' : 'outline'}
             onClick={() => setFilter('complete')}
           >
             완료
@@ -179,84 +205,131 @@ export function TasksList({ tasks, roomId }: TasksListProps) {
       </div>
 
       {sortedTasks.length === 0 ? (
-        <div className="text-center p-4 border rounded-md bg-muted/10">
-          <p className="text-muted-foreground">작업이 없습니다.</p>
+        <div className="text-center py-8 text-muted-foreground">
+          업무가 없습니다.
         </div>
       ) : (
-        <ul className="space-y-3">
-          {sortedTasks.map((task) => {
-            const isCompleted = task.completions.some(completion => completion.completed);
+        <div className="space-y-4">
+          {sortedTasks.map(task => {
+            const isCompleted = task.completions.some(c => c.completed);
+            const taskUrgent = isUrgent(task.dueDate) && !isCompleted;
             
             return (
-              <li 
+              <div 
                 key={task.id} 
-                className={`p-4 border rounded-md ${
-                  isCompleted ? 'bg-muted/20' : 'bg-card'
-                } hover:bg-secondary/5 transition-colors`}
+                className={`p-4 border rounded-lg transition-colors ${
+                  isCompleted 
+                    ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50' 
+                    : taskUrgent
+                    ? 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/10'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                }`}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3">
-                    <div>
-                      <input
-                        type="checkbox"
-                        checked={isCompleted}
-                        onChange={() => handleTaskCompletion(task.id, isCompleted)}
-                        className="h-5 w-5 rounded-md border-gray-300 text-primary focus:ring-primary"
-                      />
-                    </div>
-                    <div className={`${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-medium">{task.title}</h3>
-                        {getPriorityBadge(task.priority)}
-                      </div>
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 pt-1">
+                    <input
+                      type="checkbox"
+                      checked={isCompleted}
+                      onChange={() => handleTaskCompletion(task.id, isCompleted)}
+                      className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className={`text-lg font-medium ${isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>
+                        <Link href={`/tasks/${task.id}`} className="hover:underline">
+                          {task.title}
+                        </Link>
+                      </h3>
                       
-                      {task.description && (
-                        <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>
+                      {taskUrgent && !isCompleted && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                          급함
+                        </span>
                       )}
                       
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                        <span className="inline-flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
-                            <path fillRule="evenodd" d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.75A2.75 2.75 0 0119 6.75v8.5A2.75 2.75 0 0116.25 18H3.75A2.75 2.75 0 011 15.25v-8.5A2.75 2.75 0 013.75 4h.75V2.75A.75.75 0 015.75 2zm-2 4.5v8.75c0 .69.56 1.25 1.25 1.25h12.5c.69 0 1.25-.56 1.25-1.25V6.5H3.75z" clipRule="evenodd" />
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {getCategoryLabel(task.category)}
+                      </span>
+                      
+                      {getPriorityBadge(task.priority)}
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      {task.dueDate && (
+                        <span className="inline-flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          {task.dueDate ? formatDate(task.dueDate) : '마감일 없음'}
+                          {formatDate(task.dueDate)}
                         </span>
-                        
-                        <span className="inline-flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-5.5-2.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM10 12a5.99 5.99 0 00-4.793 2.39A6.483 6.483 0 0010 16.5a6.483 6.483 0 004.793-2.11A5.99 5.99 0 0010 12z" clipRule="evenodd" />
+                      )}
+                      
+                      {task.location && (
+                        <span className="inline-flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
-                          {getCategoryText(task.category)}
+                          {task.location}
                         </span>
-                      </div>
+                      )}
+                      
+                      {task.createdBy && (
+                        <span className="inline-flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          {task.createdBy.name}
+                        </span>
+                      )}
+                      
+                      {task.fileUrl && (
+                        <a 
+                          href={task.fileUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary-600 hover:underline dark:text-primary-400"
+                          title="첨부 파일 다운로드"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                          </svg>
+                          파일
+                        </a>
+                      )}
+                      
+                      {task.linkUrl && (
+                        <a 
+                          href={task.linkUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary-600 hover:underline dark:text-primary-400"
+                          title="관련 링크"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          링크
+                        </a>
+                      )}
                     </div>
                   </div>
-                  
-                  <div className="flex">
-                    <Link href={`/tasks/${task.id}`}>
-                      <Button variant="ghost" size="sm">
-                        <svg 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          className="h-4 w-4" 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
-                          stroke="currentColor"
-                        >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth={2} 
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-                          />
+                  <div className="flex-shrink-0">
+                    <Link href={`/tasks/${task.id}/edit?from=room_${roomId}`}>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
+                        <span className="sr-only">편집</span>
                       </Button>
                     </Link>
                   </div>
                 </div>
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
     </div>
   );

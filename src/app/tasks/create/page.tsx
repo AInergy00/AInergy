@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/Button';
 import { TaskCategory, TaskPriority } from '@prisma/client';
@@ -9,12 +9,17 @@ import { categoryLabels, priorityLabels } from '@/lib/utils/theme';
 
 export default function CreateTaskPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const roomIdParam = searchParams.get('roomId');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<'openai' | 'gemini'>('openai');
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [rooms, setRooms] = useState<{ id: string; name: string }[]>([]);
   
+  // roomId가 URL에서 제공되면 자동으로 isShared를 true로 설정
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -26,9 +31,36 @@ export default function CreateTaskPage() {
     location: '',
     materials: '',
     notes: '',
-    isShared: false,
-    roomId: '',
+    fileUrl: '',
+    linkUrl: '',
+    isShared: roomIdParam ? true : false,
+    roomId: roomIdParam || '',
   });
+
+  // 방 목록 가져오기
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const response = await fetch('/api/rooms');
+        if (response.ok) {
+          const data = await response.json();
+          // API 응답 구조가 { myRooms, joinedRooms } 형태이므로 이를 합친 배열 생성
+          const allRooms = [
+            ...(Array.isArray(data.myRooms) ? data.myRooms : []),
+            ...(Array.isArray(data.joinedRooms) ? data.joinedRooms : [])
+          ];
+          console.log('사용 가능한 방 목록:', allRooms);
+          setRooms(allRooms);
+        } else {
+          console.error('방 목록 가져오기 실패:', await response.text());
+        }
+      } catch (error) {
+        console.error('방 목록 가져오기 오류:', error);
+      }
+    };
+
+    fetchRooms();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -62,9 +94,30 @@ export default function CreateTaskPage() {
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
+    
+    // isShared 체크박스가 해제될 때, roomId도 함께 초기화
+    if (name === 'isShared' && !checked) {
+      setFormData({
+        ...formData,
+        isShared: false,
+        roomId: ''
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: checked,
+      });
+    }
+  };
+
+  // roomId가 선택되면 자동으로 isShared를 true로 설정
+  const handleRoomChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { value } = e.target;
+    
     setFormData({
       ...formData,
-      [name]: checked,
+      roomId: value,
+      isShared: value ? true : false
     });
   };
 
@@ -138,6 +191,8 @@ export default function CreateTaskPage() {
         location: formData.location,
         materials: formData.materials,
         notes: formData.notes,
+        fileUrl: formData.fileUrl,
+        linkUrl: formData.linkUrl,
         isShared: formData.isShared
       };
       
@@ -166,7 +221,12 @@ export default function CreateTaskPage() {
         throw new Error(errorData.error || '업무 저장 중 오류가 발생했습니다.');
       }
 
-      router.push('/tasks');
+      // roomId가 있으면 해당 방 페이지로 리디렉션, 없으면 업무 목록으로
+      if (formData.roomId) {
+        router.push(`/rooms/${formData.roomId}`);
+      } else {
+        router.push('/tasks');
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : '업무 저장 중 오류가 발생했습니다.');
       console.error('업무 저장 오류:', error);
@@ -408,6 +468,46 @@ export default function CreateTaskPage() {
                   />
                 </div>
               </div>
+
+              <div>
+                <label htmlFor="fileUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  파일 URL
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="fileUrl"
+                    name="fileUrl"
+                    type="url"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
+                    placeholder="https://example.com/file.pdf"
+                    value={formData.fileUrl}
+                    onChange={handleChange}
+                  />
+                </div>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  공유 드라이브나 저장소에 업로드된 파일의 URL을 입력하세요
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="linkUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  관련 링크
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="linkUrl"
+                    name="linkUrl"
+                    type="url"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
+                    placeholder="https://example.com"
+                    value={formData.linkUrl}
+                    onChange={handleChange}
+                  />
+                </div>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  업무와 관련된 참고자료나 웹사이트 링크
+                </p>
+              </div>
             </div>
 
             <div>
@@ -454,6 +554,31 @@ export default function CreateTaskPage() {
               <label htmlFor="isShared" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
                 공유하기
               </label>
+            </div>
+
+            <div className={`${formData.isShared ? 'block' : 'hidden'} mt-4`}>
+              <label htmlFor="roomId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                협업 공간 선택
+              </label>
+              <div className="mt-1">
+                <select
+                  id="roomId"
+                  name="roomId"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-900 dark:text-white"
+                  value={formData.roomId}
+                  onChange={handleRoomChange}
+                >
+                  <option value="">선택하세요</option>
+                  {rooms.map((room) => (
+                    <option key={room.id} value={room.id}>
+                      {room.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                협업 공간을 선택하면 해당 공간의 모든 구성원이 이 업무를 확인하고 편집할 수 있습니다.
+              </p>
             </div>
 
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">

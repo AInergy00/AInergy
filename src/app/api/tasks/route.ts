@@ -99,90 +99,51 @@ export async function GET(request: NextRequest) {
 // 할일 생성
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-
+  
   if (!session) {
     return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
   }
-
+  
   try {
-    const data = await request.json();
     const { 
       title, 
       description, 
       category, 
       priority, 
-      dueDate, 
-      startTime, 
-      endTime, 
-      location, 
-      materials, 
-      notes, 
+      dueDate,
+      startTime,
+      endTime,
+      location,
+      materials,
+      notes,
       isShared,
-      roomId
-    } = data;
-
-    // 필수 필드 검증
+      roomId,
+      fileUrl,
+      linkUrl
+    } = await request.json();
+    
     if (!title) {
-      return NextResponse.json(
-        { error: '제목은 필수 입력 항목입니다.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: '제목은 필수 항목입니다.' }, { status: 400 });
     }
-
-    // 카테고리와 중요도 값 검증
-    const validCategories = ['MEETING', 'BUSINESS_TRIP', 'TRAINING', 'EVENT', 'CLASSROOM', 'TASK', 'OTHER'];
-    const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
-
-    if (category && !validCategories.includes(category)) {
-      return NextResponse.json({ error: '유효하지 않은 분류입니다.' }, { status: 400 });
+    
+    if (!dueDate) {
+      return NextResponse.json({ error: '마감일은 필수 항목입니다.' }, { status: 400 });
     }
-
-    if (priority && !validPriorities.includes(priority)) {
-      return NextResponse.json({ error: '유효하지 않은 중요도입니다.' }, { status: 400 });
-    }
-
-    // 날짜 검증
-    let dueDateObj = null;
-    if (dueDate) {
-      try {
-        dueDateObj = new Date(dueDate);
-        if (isNaN(dueDateObj.getTime())) {
-          return NextResponse.json(
-            { error: '날짜 형식이 올바르지 않습니다.' },
-            { status: 400 }
-          );
-        }
-      } catch (error) {
-        return NextResponse.json(
-          { error: '날짜 형식이 올바르지 않습니다.' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // 시간 검증 및 변환 함수
+    
+    const dueDateObj = new Date(dueDate);
+    
+    // 시간 파싱 함수
     const parseTimeToDate = (timeStr: string | undefined | null, baseDate: Date | null): Date | null => {
       if (!timeStr || !timeStr.trim() || !baseDate) return null;
-      
-      // 정규식으로 시간 형식 검증 (HH:MM)
-      if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr.trim())) {
-        console.error('시간 형식 오류:', timeStr);
-        return null;
-      }
       
       try {
         const dateCopy = new Date(baseDate);
         const [hours, minutes] = timeStr.split(':').map(Number);
         
-        // 분을 10분 단위로 반올림
-        const roundedMinutes = Math.round(minutes / 10) * 10;
-        // 59분 초과되면 00분으로 조정
-        const adjustedMinutes = roundedMinutes >= 60 ? 0 : roundedMinutes;
-        
-        dateCopy.setHours(hours, adjustedMinutes, 0, 0);
+        dateCopy.setHours(hours, minutes, 0, 0);
         
         if (isNaN(dateCopy.getTime())) {
-          console.error('최종 날짜 오류:', dateCopy);
+          console.error('시간 변환 오류:', dateCopy);
           return null;
         }
         
@@ -192,9 +153,11 @@ export async function POST(request: NextRequest) {
         return null;
       }
     };
-
-    // 방 ID 검증
+    
+    // roomId가 제공된 경우 방에 대한 권한 체크
     if (roomId && roomId.trim() !== '') {
+      console.log(`Task 생성 - roomId 확인: ${roomId}`);
+      
       const room = await prisma.room.findFirst({
         where: { id: roomId },
         include: {
@@ -212,12 +175,14 @@ export async function POST(request: NextRequest) {
       if (room.members.length === 0) {
         return NextResponse.json({ error: '접근 권한이 없습니다.' }, { status: 403 });
       }
+      
+      console.log('방 정보 확인 성공:', room.name);
     }
 
     // roomId가 제공된 경우 자동으로 isShared를 true로 설정
     const shouldShare = roomId && roomId.trim() !== '' ? true : isShared ?? false;
     
-    console.log('업무 생성 - roomId:', roomId, 'isShared:', shouldShare);
+    console.log('업무 생성 정보 - roomId:', roomId, 'isShared:', shouldShare, 'fileUrl:', fileUrl, 'linkUrl:', linkUrl);
 
     const task = await prisma.task.create({
       data: {
@@ -231,16 +196,17 @@ export async function POST(request: NextRequest) {
         location: location || '',
         materials: Array.isArray(materials) ? '' : (materials || ''),
         notes: notes || '',
+        fileUrl: fileUrl || '',
+        linkUrl: linkUrl || '',
         isShared: shouldShare,
         userId: session.user.id,
         ...(roomId && roomId.trim() !== '' && {
-          room: {
-            connect: { id: roomId }
-          }
+          roomId: roomId
         })
       }
     });
 
+    console.log('업무 생성 완료:', task);
     return NextResponse.json(task);
   } catch (error) {
     console.error('할일 생성 중 오류 발생:', error);

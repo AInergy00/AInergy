@@ -8,7 +8,7 @@ const nextConfig = {
   },
   // 파일 시스템 매핑 설정 (비ASCII 경로 문제 해결)
   output: 'standalone',
-  // 외부 패키지 설정 (experimental에서 루트 레벨로 이동)
+  // 외부 패키지 설정 (루트 레벨)
   serverExternalPackages: ['@prisma/client', 'bcrypt'],
   outputFileTracingRoot: process.cwd(),
   outputFileTracingIncludes: {
@@ -31,12 +31,8 @@ const nextConfig = {
   
   // 실험 기능 활성화
   experimental: {
-    // 서버 액션 설정
-    serverActions: {
-      allowedOrigins: ['localhost:3000', '127.0.0.1:3000'],
-    },
-    // 서버 에러 처리를 위한 설정
-    errorBoundary: true,
+    // 서버 액션 활성화
+    serverActions: true,
   },
 }
 
