@@ -26,6 +26,7 @@ model User {
   templates      Template[]
   calendars      Calendar[]
   notifications  Notification[]
+  settings       UserSettings?
 }
 
 model Room {
@@ -126,6 +127,20 @@ model Notification {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   metadata  String?  // JSON string for additional data
+}
+
+model UserSettings {
+  id            String   @id @default(cuid())
+  openaiApiKey  String?
+  geminiApiKey  String?
+  defaultModel  String?  @default("openai")
+  temperature   Float?   @default(0.7)
+  maxTokens     Int?     @default(1000)
+  responseStyle String?  @default("balanced")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum TaskCategory {

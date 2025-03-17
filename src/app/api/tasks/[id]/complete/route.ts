@@ -20,9 +20,12 @@ export async function POST(
   const { id: taskId } = await params;
   const formData = await request.formData();
   const completedParam = formData.get('completed');
+  const userIdParam = formData.get('userId');
   
   // completed가 "false" 문자열이면 false로 변환, 아니면 true로 설정
   const completed = completedParam === 'false' ? false : true;
+  // userId가 제공되면 해당 사용자의 완료 상태를 변경, 아니면 현재 로그인한 사용자의 완료 상태 변경
+  const userId = userIdParam ? String(userIdParam) : session.user.id;
 
   try {
     // 업무 존재 확인
@@ -30,13 +33,33 @@ export async function POST(
       where: { id: taskId },
       include: {
         completions: {
-          where: { userId: session.user.id },
+          where: { userId },
         },
+        room: {
+          include: {
+            members: {
+              where: { userId: session.user.id },
+              include: { user: true }
+            }
+          }
+        }
       },
     });
 
     if (!task) {
       return NextResponse.json({ error: '업무를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    // 현재 사용자가 다른 사용자의 완료 상태를 변경하려고 할 때 권한 체크
+    if (userId !== session.user.id) {
+      // 방의 관리자인 경우만 다른 사용자의 완료 상태 변경 가능
+      const isRoomAdmin = task.room?.members.some(member => 
+        member.userId === session.user.id && (member.role === 'admin' || member.role === 'owner')
+      );
+      
+      if (!isRoomAdmin) {
+        return NextResponse.json({ error: '다른 사용자의 완료 상태를 변경할 권한이 없습니다.' }, { status: 403 });
+      }
     }
 
     // 자신의 업무이거나 공유된 업무만 완료 상태 변경 가능
@@ -51,7 +74,7 @@ export async function POST(
         await prisma.taskCompletion.create({
           data: {
             taskId,
-            userId: session.user.id,
+            userId,
             completed: true,
           },
         });
@@ -80,7 +103,7 @@ export async function POST(
     
     // AJAX 요청인 경우에만 JSON 응답, 아니면 Redirect 응답
     if (isAjaxRequest) {
-      return new NextResponse(JSON.stringify({ success: true, taskId }), { 
+      return new NextResponse(JSON.stringify({ success: true, taskId, userId }), { 
         status: 200,
         headers: headers
       });
