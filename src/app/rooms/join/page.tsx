@@ -60,21 +60,44 @@ export default function JoinRoomPage() {
     setError('');
     
     try {
+      console.log(`방 참여 요청: 방 ID ${room.id}, 초대 코드: ${inviteCode}`);
+      
+      // 요청 데이터 준비
+      const requestData = { inviteCode };
+      console.log('요청 데이터:', requestData);
+      
       const response = await fetch(`/api/rooms/${room.id}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ inviteCode }),
+        body: JSON.stringify(requestData),
       });
       
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '방 참여에 실패했습니다.');
+      // 응답 상태 로깅
+      console.log(`응답 상태: ${response.status} ${response.statusText}`);
+      
+      // 응답 본문 파싱
+      let data;
+      try {
+        data = await response.json();
+        console.log('응답 데이터:', data);
+      } catch (parseError) {
+        console.error('응답 파싱 오류:', parseError);
+        throw new Error('응답을 처리할 수 없습니다.');
       }
       
+      if (!response.ok) {
+        // 오류 응답 처리
+        const errorMessage = data?.error || '방 참여에 실패했습니다.';
+        console.error(`방 참여 실패 (${response.status}): ${errorMessage}`, data);
+        throw new Error(errorMessage);
+      }
+      
+      console.log('방 참여 성공:', data);
       router.push(`/rooms/${room.id}`);
     } catch (err) {
+      console.error('방 참여 오류:', err);
       setError(err instanceof Error ? err.message : '방 참여에 실패했습니다.');
     } finally {
       setJoining(false);
