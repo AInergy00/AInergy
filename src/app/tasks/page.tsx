@@ -1,179 +1,211 @@
-import { Layout } from '@/components/layout/Layout';
-import Link from 'next/link';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { redirect } from 'next/navigation';
-import { prisma } from '@/lib/db';
-import { formatDate } from '@/lib/utils/date';
-import { getCategoryColor, getCategoryLabel } from '@/lib/utils/theme';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { TasksList } from '@/components/tasks/TasksList';
 import { Button } from '@/components/ui/Button';
+import { Plus, CheckCircle, Circle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/layout/PageHeader';
+import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 
-export default async function TasksPage() {
-  const session = await getServerSession(authOptions);
+interface TaskCompletion {
+  id: string;
+  completed: boolean;
+  completedAt: string | null;
+  userId: string;
+}
 
-  if (!session) {
-    redirect('/login');
+interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  priority: string;
+  status: string;
+  dueDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  fileUrl: string | null;
+  linkUrl: string | null;
+  location: string | null;
+  materials: string | null;
+  notes: string | null;
+  roomId: string | null;
+  createdAt: string;
+  completions?: TaskCompletion[];
+}
+
+export default function TasksPage() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const res = await fetch('/api/tasks');
+        
+        if (!res.ok) {
+          throw new Error('업무를 불러오는데 실패했습니다.');
+        }
+        
+        const data = await res.json();
+        setTasks(data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching tasks:', err);
+        setError('업무를 불러오는데 실패했습니다.');
+        setLoading(false);
+        toast.error('업무를 불러오는데 실패했습니다.');
+      }
+    };
+    
+    fetchTasks();
+  }, []);
+
+  const todoTasks = tasks.filter(task => !(task.completions && task.completions.length > 0 && task.completions[0]?.completed));
+  const completedTasks = tasks.filter(task => task.completions && task.completions.length > 0 && task.completions[0]?.completed);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <motion.div 
+          className="flex flex-col items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div>
+          <p className="text-lg text-primary/80 font-medium">로딩 중...</p>
+        </motion.div>
+      </div>
+    );
   }
 
-  // 모든 업무 가져오기
-  const tasks = await prisma.task.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    orderBy: [
-      {
-        dueDate: 'asc',
-      },
-      {
-        createdAt: 'desc',
-      },
-    ],
-    include: {
-      room: {
-        select: {
-          name: true,
-        },
-      },
-      completions: {
-        where: {
-          userId: session.user.id,
-        },
-      },
-    },
-  });
-
-  const getTasks = (status: 'todo' | 'completed') => {
-    return tasks.filter(task => {
-      const isCompleted = task.completions.length > 0 && task.completions[0].completed;
-      return status === 'completed' ? isCompleted : !isCompleted;
-    });
-  };
-
-  const todoTasks = getTasks('todo');
-  const completedTasks = getTasks('completed');
+  if (error) {
+    return (
+      <>
+        <PageHeader
+          title="업무 목록"
+          description="할 일과 완료된 업무를 관리하세요"
+          actions={
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              다시 시도
+            </Button>
+          }
+        />
+        
+        <motion.div 
+          className="bg-destructive/10 text-destructive p-6 rounded-lg mb-6 border border-destructive/20 shadow-sm"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="font-medium">{error}</p>
+          </div>
+        </motion.div>
+      </>
+    );
+  }
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">업무 목록</h1>
-          <div className="flex space-x-3">
-            <Link href="/tasks/analyze">
-              <Button variant="outline">업무 쪽지 분석</Button>
-            </Link>
-            <Link href="/tasks/create">
-              <Button>새 업무 추가</Button>
-            </Link>
-          </div>
-        </div>
+    <>
+      <PageHeader
+        title="업무 목록"
+        description="할 일과 완료된 업무를 관리하세요"
+        actions={
+          <Button 
+            onClick={() => router.push('/tasks/create')} 
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            업무 추가
+          </Button>
+        }
+      />
 
-        <div className="space-y-8">
-          {/* 할 일 업무 */}
-          <div>
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">할 일 ({todoTasks.length})</h2>
+      <Card className="mt-6">
+        <CardHeader className="pb-3">
+          <Tabs defaultValue="todo" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="todo" className="flex items-center gap-2">
+                <Circle className="h-4 w-4" />
+                할 일 <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">{todoTasks.length}</span>
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                완료됨 <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">{completedTasks.length}</span>
+              </TabsTrigger>
+            </TabsList>
             
-            {todoTasks.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center">
-                <p className="text-gray-500 dark:text-gray-400">할 일이 없습니다.</p>
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-                {todoTasks.map((task) => (
-                  <div key={task.id} className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3">
-                        <div
-                          className="h-4 w-4 rounded-full mt-1"
-                          style={{ backgroundColor: getCategoryColor(task.category) }}
-                        />
-                        <div>
-                          <h3 className="text-base font-medium text-gray-900 dark:text-white">
-                            <Link href={`/tasks/${task.id}`} className="hover:underline">
-                              {task.title}
-                            </Link>
-                          </h3>
-                          <div className="mt-1 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
-                            <span>{getCategoryLabel(task.category)}</span>
-                            {task.dueDate && (
-                              <span>• {formatDate(task.dueDate)}</span>
-                            )}
-                            {task.location && (
-                              <span>• {task.location}</span>
-                            )}
-                            {task.room && (
-                              <span>• {task.room.name}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <form action={`/api/tasks/${task.id}/complete`} method="POST">
-                        <button
-                          type="submit"
-                          className="h-5 w-5 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          aria-label="완료로 표시"
-                        />
-                      </form>
+            <TabsContent value="todo" className="mt-6">
+              <AnimatePresence>
+                {todoTasks.length > 0 ? (
+                  <TasksList tasks={todoTasks} roomId="" />
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="flex flex-col items-center justify-center py-12 px-4"
+                  >
+                    <div className="rounded-full bg-primary/10 p-3 mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 완료된 업무 */}
-          <div>
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">완료됨 ({completedTasks.length})</h2>
+                    <p className="text-muted-foreground text-sm">완료하지 않은 업무가 없습니다</p>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => router.push('/tasks/create')} 
+                      className="mt-4"
+                      size="sm"
+                    >
+                      <Plus className="mr-1 h-3.5 w-3.5" />
+                      새 업무 만들기
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </TabsContent>
             
-            {completedTasks.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center">
-                <p className="text-gray-500 dark:text-gray-400">완료된 업무가 없습니다.</p>
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-                {completedTasks.map((task) => (
-                  <div key={task.id} className="p-6 opacity-70">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3">
-                        <div
-                          className="h-4 w-4 rounded-full mt-1"
-                          style={{ backgroundColor: getCategoryColor(task.category) }}
-                        />
-                        <div>
-                          <h3 className="text-base font-medium text-gray-900 dark:text-white line-through">
-                            <Link href={`/tasks/${task.id}`} className="hover:underline">
-                              {task.title}
-                            </Link>
-                          </h3>
-                          <div className="mt-1 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
-                            <span>{getCategoryLabel(task.category)}</span>
-                            {task.dueDate && (
-                              <span>• {formatDate(task.dueDate)}</span>
-                            )}
-                            {task.location && (
-                              <span>• {task.location}</span>
-                            )}
-                            {task.room && (
-                              <span>• {task.room.name}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <form action={`/api/tasks/${task.id}/complete`} method="POST">
-                        <input type="hidden" name="completed" value="false" />
-                        <button
-                          type="submit"
-                          className="h-5 w-5 rounded border border-gray-300 dark:border-gray-600 bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          aria-label="미완료로 표시"
-                        />
-                      </form>
+            <TabsContent value="completed" className="mt-6">
+              <AnimatePresence>
+                {completedTasks.length > 0 ? (
+                  <TasksList tasks={completedTasks} roomId="" />
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="flex flex-col items-center justify-center py-12 px-4"
+                  >
+                    <div className="rounded-full bg-primary/10 p-3 mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </Layout>
+                    <p className="text-muted-foreground text-sm">완료된 업무가 없습니다</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </TabsContent>
+          </Tabs>
+        </CardHeader>
+      </Card>
+    </>
   );
-} 
+}

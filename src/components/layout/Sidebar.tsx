@@ -3,86 +3,80 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Calendar, CheckSquare, Home, LogOut, Settings, Users } from 'lucide-react';
+import { signOut } from 'next-auth/react';
+import { Avatar } from '../ui/Avatar';
+import { useUserStore } from '@/store/use-user-store';
+
+const menuItems = [
+  { href: '/dashboard', icon: Home, title: '대시보드' },
+  { href: '/calendar', icon: Calendar, title: '캘린더' },
+  { href: '/tasks', icon: CheckSquare, title: '할 일' },
+  { href: '/rooms', icon: Users, title: '협업' },
+  { href: '/settings', icon: Settings, title: '설정' },
+];
 
 export function Sidebar() {
   const pathname = usePathname();
-  
-  const menuItems = [
-    {
-      name: '대시보드',
-      href: '/dashboard',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 home-icon" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-        </svg>
-      ),
-    },
-    {
-      name: '캘린더',
-      href: '/calendar',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-        </svg>
-      ),
-    },
-    {
-      name: '업무',
-      href: '/tasks',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-          <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-        </svg>
-      ),
-    },
-    {
-      name: '협업',
-      href: '/rooms',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-        </svg>
-      ),
-    },
-    {
-      name: '설정',
-      href: '/settings',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-        </svg>
-      ),
-    },
-  ];
+  const user = useUserStore((state) => state.user);
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/' });
+  };
 
   return (
-    <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-64px)] bg-card border-r overflow-y-auto">
-      <div className="p-4">
-        <nav className="space-y-1">
+    <aside className="w-64 h-screen flex flex-col overflow-hidden border-r border-border/40 bg-background/50 backdrop-blur-md">
+      {/* 로고와 프로필 */}
+      <div className="p-6 border-b border-border/40">
+        <div className="text-xl font-bold text-primary mb-6">AI 스쿨 어시스트</div>
+        {user && (
+          <div className="flex items-center gap-3">
+            <Avatar
+              src={user.image || undefined}
+              fallback={user.name?.[0] || user.username?.[0] || 'U'}
+            />
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium truncate">{user.name || user.username}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 메뉴 항목 */}
+      <nav className="flex-1 py-4 overflow-y-auto">
+        <ul className="space-y-1 px-3">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
-            
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md group transition-colors ${
-                  isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                }`}
-              >
-                <div
-                  className={`mr-3 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}
-                >
-                  {item.icon}
-                </div>
-                {item.name}
-              </Link>
+              <li key={item.href}>
+                <Link href={item.href} passHref>
+                  <div
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                      isActive
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                    }`}
+                  >
+                    <item.icon size={18} />
+                    <span>{item.title}</span>
+                  </div>
+                </Link>
+              </li>
             );
           })}
-        </nav>
+        </ul>
+      </nav>
+
+      {/* 로그아웃 버튼 */}
+      <div className="p-4 border-t border-border/40">
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 text-muted-foreground hover:text-destructive w-full px-3 py-2.5 rounded-lg transition-colors duration-200"
+        >
+          <LogOut size={18} />
+          <span className="text-sm font-medium">로그아웃</span>
+        </button>
       </div>
     </aside>
   );

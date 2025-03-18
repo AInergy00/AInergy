@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Layout } from '@/components/layout/Layout';
 import { Card } from '@/components/ui/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { useParams, useRouter } from 'next/navigation';
@@ -98,31 +97,25 @@ export default function RoomPage() {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-muted-foreground">로딩 중...</div>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center h-64">
+        <div className="text-muted-foreground">로딩 중...</div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Layout>
-        <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
-          <p>{error}</p>
-        </div>
-      </Layout>
+      <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
+        <p>{error}</p>
+      </div>
     );
   }
 
   if (!room) {
     return (
-      <Layout>
-        <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
-          <p>방을 찾을 수 없습니다.</p>
-        </div>
-      </Layout>
+      <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
+        <p>방을 찾을 수 없습니다.</p>
+      </div>
     );
   }
 
@@ -131,30 +124,99 @@ export default function RoomPage() {
   const adminName = roomAdmin?.user?.name || '알 수 없음';
 
   return (
-    <Layout>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{room.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              {roomAdmin && (
-                <>방장: {adminName} · </>
-              )}
-              생성일: {format(new Date(room.createdAt), 'PPP', { locale: ko })}
-            </p>
-          </div>
-          {userRole === 'admin' && (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{room.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            {roomAdmin && (
+              <>방장: {adminName} · </>
+            )}
+            생성일: {format(new Date(room.createdAt), 'PPP', { locale: ko })}
+          </p>
+        </div>
+        {userRole === 'admin' && (
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Link href={`/rooms/${room.id}/edit`}>
+              <Button variant="outline">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 mr-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+                방 설정
+              </Button>
+            </Link>
+          </motion.div>
+        )}
+      </div>
+
+      {room.description && (
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground">{room.description}</p>
+        </Card>
+      )}
+
+      <Tabs defaultValue="tasks" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="tasks">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            작업 목록
+          </TabsTrigger>
+          <TabsTrigger value="members">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            구성원
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="tasks" className="mt-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">작업 목록</h2>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link href={`/rooms/${room.id}/edit`}>
-                <Button variant="outline">
+              <Link href={`/tasks/create?roomId=${room.id}`}>
+                <Button size="sm">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 mr-2"
+                    className="h-4 w-4 mr-1"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -163,64 +225,22 @@ export default function RoomPage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  방 설정
+                  작업 추가
                 </Button>
               </Link>
             </motion.div>
-          )}
-        </div>
-
-        {room.description && (
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground">{room.description}</p>
-          </Card>
-        )}
-
-        <Tabs defaultValue="tasks" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="tasks">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-              작업 목록
-            </TabsTrigger>
-            <TabsTrigger value="members">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-              구성원
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="tasks" className="mt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">작업 목록</h2>
+          </div>
+          <TasksList tasks={room.tasks} roomId={room.id} />
+        </TabsContent>
+        <TabsContent value="members" className="mt-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">구성원</h2>
+            {userRole === 'admin' && (
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link href={`/tasks/create?roomId=${room.id}`}>
+                <Link href={`/rooms/${room.id}/invite`}>
                   <Button size="sm">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -233,47 +253,18 @@ export default function RoomPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M12 4v16m8-8H4"
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
                       />
                     </svg>
-                    작업 추가
+                    초대
                   </Button>
                 </Link>
               </motion.div>
-            </div>
-            <TasksList tasks={room.tasks} roomId={room.id} />
-          </TabsContent>
-          <TabsContent value="members" className="mt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">구성원</h2>
-              {userRole === 'admin' && (
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Link href={`/rooms/${room.id}/invite`}>
-                    <Button size="sm">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                        />
-                      </svg>
-                      초대하기
-                    </Button>
-                  </Link>
-                </motion.div>
-              )}
-            </div>
-            <MembersList members={room.members} roomId={room.id} currentUserRole={userRole} />
-          </TabsContent>
-        </Tabs>
-      </motion.div>
-    </Layout>
+            )}
+          </div>
+          <MembersList members={room.members} roomId={room.id} currentUserRole={userRole} />
+        </TabsContent>
+      </Tabs>
+    </motion.div>
   );
 } 

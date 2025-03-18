@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import { Layout } from '@/components/layout/Layout';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { SessionProvider } from '@/components/auth/SessionProvider';
+import { QueryClientProvider } from '@/components/query/QueryClientProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,7 +28,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider>
-            <Layout>{children}</Layout>
+            <QueryClientProvider>
+              <Layout>{children}</Layout>
+            </QueryClientProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

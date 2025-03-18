@@ -48,14 +48,21 @@ export async function GET(request: NextRequest) {
         { userId: session.user.id }, // 사용자가 생성한 할일
         { 
           room: {
-            OR: [
-              { ownerId: session.user.id }, // 사용자가 방장인 방의 할일
-              { 
-                members: {
-                  some: { userId: session.user.id }
-                }
+            members: {
+              some: { 
+                userId: session.user.id,
+                role: "admin" // 방장(admin) 역할을 가진 사용자
               }
-            ]
+            }
+          }
+        },
+        {
+          room: {
+            members: {
+              some: { 
+                userId: session.user.id 
+              }
+            }
           }
         }
       ];
